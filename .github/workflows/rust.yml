@@ -1,4 +1,4 @@
-name: minishogilib
+name: test
 
 on: [push]
 
