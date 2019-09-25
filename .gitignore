@@ -1,0 +1,6 @@
+# Editor
+.vscode
+
+# Rust
+Cargo.lock
+target/
