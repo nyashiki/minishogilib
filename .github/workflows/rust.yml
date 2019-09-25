@@ -3,12 +3,12 @@ name: Rust
 on: [push]
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      - script: |
-        rustup install nightly
-        rustup override set nightly
-        cargo build --verbose
+      - uses: actions/checkout@v1
+      - name: Test
+        run: |
+          rustup install nightly
+          rustup override set nightly
+          cargo build --verbose
