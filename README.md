@@ -1,6 +1,6 @@
 # Minishogilib
-![](https://github.com/Nyashiki/minishogilib/workflows/build/badge.svg)
-![](https://github.com/Nyashiki/minishogilib/workflows/test/badge.svg)
+[![](https://github.com/Nyashiki/minishogilib/workflows/build/badge.svg)](https://github.com/Nyashiki/minishogilib/actions?workflow=build)
+[![](https://github.com/Nyashiki/minishogilib/workflows/test/badge.svg)](https://github.com/Nyashiki/minishogilib/actions?workflow=test)
 
 This is a python3 library of [Minishogi](https://en.wikipedia.org/wiki/Minishogi) (a variant of Shogi) written in Rust.
 
