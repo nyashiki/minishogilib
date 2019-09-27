@@ -1,0 +1,14 @@
+name: build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Build
+        run: |
+          rustup install nightly
+          rustup override set nightly
+          cargo build --release --verbose
