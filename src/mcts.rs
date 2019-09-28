@@ -145,9 +145,7 @@ impl MCTS {
             }
         }
 
-        for node in &mut self.game_tree {
-            node.clear();
-        }
+        self.clear();
 
         self.game_tree[1].is_used = true;
         self.node_index = 2;
