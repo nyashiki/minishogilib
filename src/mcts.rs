@@ -36,7 +36,7 @@ impl Node {
         }
     }
 
-    pub fn clear(&mut self, shrink: bool) {
+    pub fn clear(&mut self) {
         self.n = 0;
         self.v = 0.0;
         self.p = 0.0;
@@ -44,11 +44,7 @@ impl Node {
         self.m = NULL_MOVE;
         self.parent = 0;
         self.children.clear();
-
-        if shrink {
-            self.children.shrink_to_fit();
-        }
-
+        self.children.shrink_to_fit();
         self.is_terminal = false;
         self.virtual_loss = 0.0;
         self.is_used = false;
@@ -116,9 +112,9 @@ impl MCTS {
         });
     }
 
-    pub fn clear(&mut self, shrink: bool) {
-        for node in &mut self.game_tree {
-            node.clear(shrink);
+    pub fn clear(&mut self) {
+        if self.prev_root != 0 {
+            self.eliminate_except(self.prev_root, 0);
         }
 
         self.node_index = 1;
@@ -150,7 +146,7 @@ impl MCTS {
         }
 
         for node in &mut self.game_tree {
-            node.clear(false);
+            node.clear();
         }
 
         self.game_tree[1].is_used = true;
@@ -551,7 +547,7 @@ impl MCTS {
                 nodes.push(*child);
             }
 
-            self.game_tree[n].clear(false);
+            self.game_tree[n].clear();
             self.node_used_count -= 1;
         }
     }
