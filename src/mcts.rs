@@ -113,8 +113,8 @@ impl MCTS {
     }
 
     pub fn clear(&mut self) {
-        for node in &mut self.game_tree {
-            node.clear();
+        if self.prev_root != 0 {
+            self.eliminate_except(self.prev_root, 0);
         }
 
         self.node_index = 1;
@@ -145,9 +145,7 @@ impl MCTS {
             }
         }
 
-        for node in &mut self.game_tree {
-            node.clear();
-        }
+        self.clear();
 
         self.game_tree[1].is_used = true;
         self.node_index = 2;
@@ -221,10 +219,9 @@ impl MCTS {
         position: &Position,
         np_policy: &PyArray1<f32>,
         mut value: f32,
-        force: bool,
         dirichlet_noise: bool,
     ) -> f32 {
-        if self.game_tree[node].n > 0 {
+        if !dirichlet_noise && self.game_tree[node].n > 0 {
             return self.game_tree[node].v;
         }
 
@@ -315,7 +312,7 @@ impl MCTS {
                     index = (index + 1) % self.size;
                 }
             }
-        } else if force {
+        } else if dirichlet_noise {
             let children = self.game_tree[node].children.clone();
 
             for (i, child) in children.iter().enumerate() {
