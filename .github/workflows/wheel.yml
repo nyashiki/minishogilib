@@ -12,8 +12,8 @@ jobs:
           cd docker
           docker-compose up build
           cd ../
-          mkdir /minishogilib
-          cp t./arget/wheels/* /minishogilib/          
+          sudo mkdir /minishogilib
+          sudo cp ./target/wheels/* /minishogilib/          
       - uses: actions/upload-artifact@master
         with:
           name: artifacts
