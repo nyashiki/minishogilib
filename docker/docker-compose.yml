@@ -6,7 +6,7 @@ services:
       - ../:/minishogilib
     command: >
         bash -c "apt update &&
-              apt-get install -y curl python3-pip &&
+              apt-get install -y curl python3-pip python3.7 &&
               curl https://sh.rustup.rs -sSf | sh -s -- -y &&
               pip3 install pyo3-pack &&
               source /root/.cargo/env &&
