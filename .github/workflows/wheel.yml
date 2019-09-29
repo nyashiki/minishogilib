@@ -9,13 +9,11 @@ jobs:
       - uses: actions/checkout@v1
       - name: Wheel
         run: |
-          rustup install nightly
-          rustup override set nightly
-          apt-get install -y python3.7
-          pip3 install -y pyo3-pack
-          pyo3-pack build
+          cd docker
+          docker-compose up build
+          cd ../
           mkdir /minishogilib
-          cp target/wheels/* /minishogilib/          
+          cp t./arget/wheels/* /minishogilib/          
       - uses: actions/upload-artifact@master
         with:
           name: artifacts
