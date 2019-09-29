@@ -11,10 +11,7 @@ jobs:
         run: |
           cd docker
           docker-compose up build
-          cd ../
-          sudo mkdir /minishogilib
-          sudo cp ./target/wheels/* /minishogilib/          
       - uses: actions/upload-artifact@master
         with:
           name: artifacts
-          path: /minishogilib/
+          path: ./target/wheels/
