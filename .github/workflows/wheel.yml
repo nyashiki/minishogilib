@@ -1,0 +1,22 @@
+name: wheel
+
+on: [push]
+
+jobs:
+  wheel:
+    runs-on: ubuntu:18.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: Wheel
+        run: |
+          rustup install nightly
+          rustup override set nightly
+          apt-get install -y python3.7
+          pip3 install -y pyo3-pack
+          pyo3-pack build
+          mkdir /minishogilib
+          cp target/wheels/* /minishogilib/          
+      - uses: actions/upload-artifact@master
+        with:
+          name: artifacts
+          path: /minishogilib/
