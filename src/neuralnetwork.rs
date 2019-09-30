@@ -34,7 +34,7 @@ use pyo3::prelude::*;
 impl Position {
     /// \[チャネル\]\[y座標\]\[x座標\]の形式で返す
     pub fn to_nninput(&self, py: Python) -> Py<PyArray1<f32>> {
-        const HISTORY: usize = 4;
+        const HISTORY: usize = 8;
         const CHANNEL_NUM_PER_HISTORY: usize = 10 + 10 + 3 + 5 + 5;
         const CHANNEL_NUM: usize = CHANNEL_NUM_PER_HISTORY * HISTORY + 2;
 
