@@ -105,7 +105,7 @@ impl Position {
         return PyArray1::from_slice(py, &input_layer).to_owned();
     }
 
-    /// 23763要素のベクトルの形式で返す
+    /// 12888要素のベクトルの形式で返す
     /// 25 * 19 * 25: 自分の玉の場所 * 自分の玉以外の駒の場所と種類
     /// 5 * 2       : 持ち駒の数
     /// 1           : 手番
@@ -118,10 +118,14 @@ impl Position {
         let my_king_square = if self.side_to_move == Color::White {
             ::bitboard::get_square(self.piece_bb[Piece::WKing as usize])
         } else {
-            SQUARE_NB - 1 - ::bitboard::get_square(self.piece_bb[Piece::BKing as usize])
+            ::bitboard::get_square(self.piece_bb[Piece::BKing as usize])
         };
 
-        let offset = my_king_square * 19 * 25;
+        let offset = if self.side_to_move == Color::White {
+            my_king_square * 19 * 25
+        } else {
+            (SQUARE_NB - 1 - my_king_square) * 19 * 25
+        };
 
         for i in 0..SQUARE_NB {
             if i == my_king_square || self.board[i] == Piece::NoPiece {
