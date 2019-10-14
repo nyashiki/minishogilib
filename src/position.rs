@@ -24,7 +24,7 @@ pub struct Position {
     pub hash: [u64; MAX_PLY + 1],
 
     pub adjacent_check_bb: [Bitboard; MAX_PLY + 1], // 近接駒による王手を表すbitboard
-    pub long_check_bb: [Bitboard; MAX_PLY + 1],     /* 長い利きを持つ駒による王手を表すbitboard */
+    pub long_check_bb: [Bitboard; MAX_PLY + 1],     // 長い利きを持つ駒による王手を表すbitboard
 
     pub sequent_check_count: [[i8; 2]; MAX_PLY + 1],
 }
