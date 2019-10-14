@@ -25,6 +25,10 @@ fn attack(position: &mut Position, depth: i32) -> (bool, Move) {
         return (false, NULL_MOVE);
     }
 
+    if position.ply == MAX_PLY as u16 {
+        return (false, NULL_MOVE);
+    }
+
     let moves = position.generate_moves(); // ToDo: 王手生成ルーチン
 
     for m in &moves {
@@ -54,6 +58,10 @@ fn attack(position: &mut Position, depth: i32) -> (bool, Move) {
 }
 
 fn defense(position: &mut Position, depth: i32) -> (bool, Move) {
+    if position.ply == MAX_PLY as u16 {
+        return (false, NULL_MOVE);
+    }
+
     let moves = position.generate_moves();
 
     if moves.len() == 0

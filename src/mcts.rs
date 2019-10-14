@@ -227,7 +227,7 @@ impl MCTS {
 
         let policy = np_policy.as_array();
         let mut legal_policy_sum: f32 = 0.0;
-        let mut policy_max: f32 = 0.0;
+        let mut policy_max: f32 = std::f32::MIN;
         let moves = position.generate_moves();
 
         for m in &moves {
@@ -242,7 +242,7 @@ impl MCTS {
 
         let (is_repetition, is_check_repetition) = position.is_repetition();
 
-        if is_repetition || moves.len() == 0 {
+        if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
             self.game_tree[node].is_terminal = true;
         }
 
@@ -252,6 +252,8 @@ impl MCTS {
                 value = 1.0;
             } else if is_repetition {
                 value = if position.side_to_move == Color::White { 0.0 } else { 1.0 }
+            } else if position.ply == MAX_PLY as u16 {
+                value = 0.5;
             } else {
                 value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
                     == PieceType::Pawn
@@ -284,46 +286,48 @@ impl MCTS {
         }
 
         // set policy and vaue
-        if self.game_tree[node].children.len() == 0 {
-            for (i, m) in moves.iter().enumerate() {
-                let policy_index = m.to_policy_index();
+        if !self.game_tree[node].is_terminal {
+            if self.game_tree[node].children.len() == 0 {
+                for (i, m) in moves.iter().enumerate() {
+                    let policy_index = m.to_policy_index();
 
-                let mut index = self.node_index;
-                loop {
-                    if index == 0 {
-                        index = 1;
+                    let mut index = self.node_index;
+                    loop {
+                        if index == 0 {
+                            index = 1;
+                        }
+
+                        if !self.game_tree[index].is_used {
+                            let p = if dirichlet_noise {
+                                ((policy[policy_index] - policy_max).exp() / legal_policy_sum) * 0.75
+                                    + (noise[i] as f32) * 0.25
+                            } else {
+                                (policy[policy_index] - policy_max).exp() / legal_policy_sum
+                            };
+
+                            self.game_tree[index] = Node::new(node, *m, p, true);
+                            self.game_tree[node].children.push(index);
+                            self.node_index = (index + 1) % self.size;
+                            self.node_used_count += 1;
+
+                            break;
+                        }
+                        index = (index + 1) % self.size;
                     }
-
-                    if !self.game_tree[index].is_used {
-                        let p = if dirichlet_noise {
-                            ((policy[policy_index] - policy_max).exp() / legal_policy_sum) * 0.75
-                                + (noise[i] as f32) * 0.25
-                        } else {
-                            (policy[policy_index] - policy_max).exp() / legal_policy_sum
-                        };
-
-                        self.game_tree[index] = Node::new(node, *m, p, true);
-                        self.game_tree[node].children.push(index);
-                        self.node_index = (index + 1) % self.size;
-                        self.node_used_count += 1;
-
-                        break;
-                    }
-                    index = (index + 1) % self.size;
                 }
-            }
-        } else if dirichlet_noise {
-            let children = self.game_tree[node].children.clone();
+            } else if dirichlet_noise {
+                let children = self.game_tree[node].children.clone();
 
-            for (i, child) in children.iter().enumerate() {
-                let policy_index = self.game_tree[*child].m.to_policy_index();
+                for (i, child) in children.iter().enumerate() {
+                    let policy_index = self.game_tree[*child].m.to_policy_index();
 
-                self.game_tree[*child].p = if dirichlet_noise {
-                    ((policy[policy_index] - policy_max).exp() / legal_policy_sum) * 0.75
-                        + (noise[i] as f32) * 0.25
-                } else {
-                    (policy[policy_index] - policy_max).exp() / legal_policy_sum
-                };
+                    self.game_tree[*child].p = if dirichlet_noise {
+                        ((policy[policy_index] - policy_max).exp() / legal_policy_sum) * 0.75
+                            + (noise[i] as f32) * 0.25
+                    } else {
+                        (policy[policy_index] - policy_max).exp() / legal_policy_sum
+                    };
+                }
             }
         }
 
