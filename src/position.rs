@@ -13,19 +13,15 @@ pub struct Position {
     pub side_to_move: Color,
     pub board: [Piece; SQUARE_NB],
     pub hand: [[u8; 5]; 2],
-    pub pawn_flags: [u8; 2],
-
-    pub piece_bb: [Bitboard; Piece::BPawnX as usize + 1],
-    pub player_bb: [Bitboard; 2],
-
     pub ply: u16,
     pub kif: [Move; MAX_PLY + 1],
-
     pub hash: [u64; MAX_PLY + 1],
 
+    pub pawn_flags: [u8; 2],
+    pub piece_bb: [Bitboard; Piece::BPawnX as usize + 1],
+    pub player_bb: [Bitboard; 2],
     pub adjacent_check_bb: [Bitboard; MAX_PLY + 1], // 近接駒による王手を表すbitboard
     pub long_check_bb: [Bitboard; MAX_PLY + 1],     // 長い利きを持つ駒による王手を表すbitboard
-
     pub sequent_check_count: [[i8; 2]; MAX_PLY + 1],
 }
 
@@ -129,7 +125,7 @@ impl Position {
         self.kif[0..self.ply as usize].to_vec().into_iter().map(|x| x.csa_sfen()).collect()
     }
 
-    pub fn set_sfen(&mut self, sfen: &str) {
+    pub fn _set_sfen_with_option(&mut self, sfen: &str, incremental_update: bool) {
         // 初期化
         for i in 0..SQUARE_NB {
             self.board[i] = Piece::NoPiece;
@@ -227,9 +223,18 @@ impl Position {
                 }
 
                 let m = self.sfen_to_move(sfen_move.unwrap().to_string());
-                self.do_move(&m);
+                self._do_move_with_option(&m, incremental_update);
             }
         }
+    }
+
+    pub fn set_sfen(&mut self, sfen: &str) {
+        self._set_sfen_with_option(sfen, true);
+    }
+
+    pub fn set_sfen_simple(&mut self, sfen: &str) {
+        self._set_sfen_with_option(sfen, false);
+        self.set_flags();
     }
 
     pub fn set_sfen_without_startpos(&mut self, sfen: String) {
@@ -272,7 +277,31 @@ impl Position {
         return self.generate_moves_with_option(true, true, false);
     }
 
-    pub fn do_move(&mut self, m: &Move) {
+    pub fn set_flags(&mut self) {
+        self.pawn_flags = [0; 2];
+        self.piece_bb = [0; Piece::BPawnX as usize + 1];
+        self.player_bb = [0; 2];
+        self.adjacent_check_bb = [0; MAX_PLY + 1];
+        self.long_check_bb = [0; MAX_PLY + 1];
+        self.sequent_check_count = [[0; 2]; MAX_PLY + 1];
+
+        for i in 0..SQUARE_NB {
+            if self.board[i] == Piece::WPawn {
+                self.pawn_flags[Color::White as usize] |= 1 << (i % 5);
+            } else if self.board[i] == Piece::BPawn {
+                self.pawn_flags[Color::Black as usize] |= 1 << (i % 5);
+            }
+
+            if self.board[i] != Piece::NoPiece {
+                self.piece_bb[self.board[i] as usize] |= 1 << i;
+                self.player_bb[self.board[i].get_color() as usize] |= 1 << i;
+            }
+        }
+
+        self.set_check_bb();
+    }
+
+    pub fn _do_move_with_option(&mut self, m: &Move, incremental_update: bool) {
         assert!(m.capture_piece.get_piece_type() != PieceType::King);
 
         self.hash[self.ply as usize + 1] = self.hash[self.ply as usize];
@@ -283,13 +312,15 @@ impl Position {
             self.board[m.to as usize] = m.piece;
             self.hand[self.side_to_move as usize][m.piece.get_piece_type() as usize - 2] -= 1;
 
-            // Bitboardの更新
-            self.piece_bb[m.piece as usize] |= 1 << m.to;
-            self.player_bb[self.side_to_move as usize] |= 1 << m.to;
+            if incremental_update {
+                // Bitboardの更新
+                self.piece_bb[m.piece as usize] |= 1 << m.to;
+                self.player_bb[self.side_to_move as usize] |= 1 << m.to;
 
-            // 二歩フラグの更新
-            if m.piece.get_piece_type() == PieceType::Pawn {
-                self.pawn_flags[self.side_to_move as usize] |= 1 << (m.to % 5);
+                // 二歩フラグの更新
+                if m.piece.get_piece_type() == PieceType::Pawn {
+                    self.pawn_flags[self.side_to_move as usize] |= 1 << (m.to % 5);
+                }
             }
 
             // hash値の更新
@@ -301,13 +332,15 @@ impl Position {
                 self.hand[self.side_to_move as usize]
                     [m.capture_piece.get_piece_type().get_raw() as usize - 2] += 1;
 
-                // Bitboardの更新
-                self.piece_bb[m.capture_piece as usize] ^= 1 << m.to;
-                self.player_bb[self.side_to_move.get_op_color() as usize] ^= 1 << m.to;
+                if incremental_update {
+                    // Bitboardの更新
+                    self.piece_bb[m.capture_piece as usize] ^= 1 << m.to;
+                    self.player_bb[self.side_to_move.get_op_color() as usize] ^= 1 << m.to;
 
-                // 二歩フラグの更新
-                if m.capture_piece.get_piece_type() == PieceType::Pawn {
-                    self.pawn_flags[self.side_to_move.get_op_color() as usize] ^= 1 << (m.to % 5);
+                    // 二歩フラグの更新
+                    if m.capture_piece.get_piece_type() == PieceType::Pawn {
+                        self.pawn_flags[self.side_to_move.get_op_color() as usize] ^= 1 << (m.to % 5);
+                    }
                 }
 
                 // hashの更新
@@ -317,9 +350,12 @@ impl Position {
 
             if m.promotion {
                 self.board[m.to as usize] = m.piece.get_promoted();
-                // 二歩フラグの更新
-                if m.piece.get_piece_type() == PieceType::Pawn {
-                    self.pawn_flags[self.side_to_move as usize] ^= 1 << (m.to % 5);
+
+                if incremental_update {
+                    // 二歩フラグの更新
+                    if m.piece.get_piece_type() == PieceType::Pawn {
+                        self.pawn_flags[self.side_to_move as usize] ^= 1 << (m.to % 5);
+                    }
                 }
             } else {
                 self.board[m.to as usize] = m.piece;
@@ -327,13 +363,15 @@ impl Position {
 
             self.board[m.from as usize] = Piece::NoPiece;
 
-            // Bitboardの更新
-            // 移動先
-            self.piece_bb[self.board[m.to as usize] as usize] |= 1 << m.to;
-            self.player_bb[self.side_to_move as usize] |= 1 << m.to;
-            // 移動元
-            self.piece_bb[m.piece as usize] ^= 1 << m.from;
-            self.player_bb[self.side_to_move as usize] ^= 1 << m.from;
+            if incremental_update {
+                // Bitboardの更新
+                // 移動先
+                self.piece_bb[self.board[m.to as usize] as usize] |= 1 << m.to;
+                self.player_bb[self.side_to_move as usize] |= 1 << m.to;
+                // 移動元
+                self.piece_bb[m.piece as usize] ^= 1 << m.from;
+                self.player_bb[self.side_to_move as usize] ^= 1 << m.from;
+            }
 
             // hash値の更新
             self.hash[self.ply as usize + 1] ^= ::zobrist::BOARD_TABLE[m.from][m.piece as usize];
@@ -352,23 +390,29 @@ impl Position {
         // 手番を変える
         self.side_to_move = self.side_to_move.get_op_color();
 
-        // 王手している駒を記録
-        self.set_check_bb();
+        if incremental_update {
+            // 王手している駒を記録
+            self.set_check_bb();
 
-        // 連続王手のカウント
-        if self.adjacent_check_bb[self.ply as usize] != 0
-            || self.long_check_bb[self.ply as usize] != 0
-        {
-            self.sequent_check_count[self.ply as usize]
-                [self.side_to_move.get_op_color() as usize] = self.sequent_check_count
-                [self.ply as usize - 1][self.side_to_move.get_op_color() as usize]
-                + 1;
-        } else {
-            self.sequent_check_count[self.ply as usize]
-                [self.side_to_move.get_op_color() as usize] = 0;
+            // 連続王手のカウント
+            if self.adjacent_check_bb[self.ply as usize] != 0
+                || self.long_check_bb[self.ply as usize] != 0
+            {
+                self.sequent_check_count[self.ply as usize]
+                    [self.side_to_move.get_op_color() as usize] = self.sequent_check_count
+                    [self.ply as usize - 1][self.side_to_move.get_op_color() as usize]
+                    + 1;
+            } else {
+                self.sequent_check_count[self.ply as usize]
+                    [self.side_to_move.get_op_color() as usize] = 0;
+            }
+            self.sequent_check_count[self.ply as usize][self.side_to_move as usize] =
+                self.sequent_check_count[self.ply as usize - 1][self.side_to_move as usize];
         }
-        self.sequent_check_count[self.ply as usize][self.side_to_move as usize] =
-            self.sequent_check_count[self.ply as usize - 1][self.side_to_move as usize];
+    }
+
+    pub fn do_move(&mut self, m: &Move) {
+        self._do_move_with_option(m, true);
     }
 
     pub fn undo_move(&mut self) {
@@ -1756,4 +1800,63 @@ fn init_position_moves_test() {
     let moves = position.generate_moves();
 
     assert_eq!(moves.len(), 14);
+}
+
+#[test]
+fn do_move_simple_test() {
+    ::bitboard::init();
+
+    const LOOP_NUM: i32 = 100000;
+
+    let mut position = Position::empty_board();
+
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..LOOP_NUM {
+        position.set_start_position();
+
+        while position.ply < MAX_PLY as u16 {
+            let moves = position.generate_moves();
+
+            let mut simple_position = Position::empty_board();
+            simple_position.set_start_position();
+
+            for ply in 0..position.ply {
+                simple_position._do_move_with_option(&position.kif[ply as usize], false);
+            }
+
+            simple_position.set_flags();
+
+            assert_eq!(position.side_to_move, simple_position.side_to_move);
+            assert_eq!(position.ply, simple_position.ply);
+            for i in 0..SQUARE_NB {
+                assert_eq!(position.board[i], simple_position.board[i]);
+            }
+            for i in 0..5 {
+                assert_eq!(position.hand[Color::White as usize][i], simple_position.hand[Color::White as usize][i]);
+                assert_eq!(position.hand[Color::Black as usize][i], simple_position.hand[Color::Black as usize][i]);
+            }
+            for i in 0..position.ply as usize {
+                assert_eq!(position.kif[i], simple_position.kif[i]);
+                assert_eq!(position.hash[i], simple_position.hash[i]);
+            }
+            assert_eq!(position.pawn_flags[Color::White as usize], simple_position.pawn_flags[Color::White as usize]);
+            assert_eq!(position.pawn_flags[Color::Black as usize], simple_position.pawn_flags[Color::Black as usize]);
+            for i in 0..Piece::BPawnX as usize + 1 {
+                assert_eq!(position.piece_bb[i], simple_position.piece_bb[i]);
+            }
+            assert_eq!(position.player_bb[Color::White as usize], simple_position.player_bb[Color::White as usize]);
+            assert_eq!(position.player_bb[Color::Black as usize], simple_position.player_bb[Color::Black as usize]);
+            assert_eq!(position.adjacent_check_bb[position.ply as usize ], simple_position.adjacent_check_bb[position.ply as usize]);
+            assert_eq!(position.long_check_bb[position.ply as usize], simple_position.long_check_bb[position.ply as usize]);
+
+            // ランダムに局面を進める
+            if moves.len() == 0 {
+                break;
+            }
+
+            let random_move = moves.choose(&mut rng).unwrap();
+            position.do_move(random_move);
+        }
+    }
 }
