@@ -232,10 +232,15 @@ impl Position {
         }
     }
 
-    pub fn set_start_position(&mut self) {
+    pub fn set_sfen_without_startpos(&mut self, sfen: String) {
         static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
+        let sfen_kif = format!("{} moves {}", START_POSITION_SFEN, sfen);
 
-        self.set_sfen(START_POSITION_SFEN);
+        self.set_sfen(&sfen_kif);
+    }
+
+    pub fn set_start_position(&mut self) {
+        self.set_sfen_without_startpos("".to_string());
     }
 
     /// sfen形式での指し手をMove構造体に変換する
