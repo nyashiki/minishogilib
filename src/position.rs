@@ -21,7 +21,7 @@ pub struct Position {
     pub piece_bb: [Bitboard; Piece::BPawnX as usize + 1],
     pub player_bb: [Bitboard; 2],
     pub adjacent_check_bb: [Bitboard; MAX_PLY + 1], // 近接駒による王手を表すbitboard
-    pub long_check_bb: [Bitboard; MAX_PLY + 1],     // 長い利きを持つ駒による王手を表すbitboard
+    pub long_check_bb: [Bitboard; MAX_PLY + 1],     /* 長い利きを持つ駒による王手を表すbitboard */
     pub sequent_check_count: [[i8; 2]; MAX_PLY + 1],
 }
 
@@ -237,6 +237,10 @@ impl Position {
         self.set_flags();
     }
 
+    pub fn set_start_position(&mut self) {
+        self.set_sfen_without_startpos("".to_string());
+    }
+
     pub fn set_sfen_without_startpos(&mut self, sfen: String) {
         static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
         let sfen_kif = format!("{} moves {}", START_POSITION_SFEN, sfen);
@@ -244,8 +248,11 @@ impl Position {
         self.set_sfen(&sfen_kif);
     }
 
-    pub fn set_start_position(&mut self) {
-        self.set_sfen_without_startpos("".to_string());
+    pub fn set_sfen_without_startpos_simple(&mut self, sfen: String) {
+        static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
+        let sfen_kif = format!("{} moves {}", START_POSITION_SFEN, sfen);
+
+        self.set_sfen_simple(&sfen_kif);
     }
 
     /// sfen形式での指し手をMove構造体に変換する
@@ -339,7 +346,8 @@ impl Position {
 
                     // 二歩フラグの更新
                     if m.capture_piece.get_piece_type() == PieceType::Pawn {
-                        self.pawn_flags[self.side_to_move.get_op_color() as usize] ^= 1 << (m.to % 5);
+                        self.pawn_flags[self.side_to_move.get_op_color() as usize] ^=
+                            1 << (m.to % 5);
                     }
                 }
 
@@ -1833,22 +1841,46 @@ fn do_move_simple_test() {
                 assert_eq!(position.board[i], simple_position.board[i]);
             }
             for i in 0..5 {
-                assert_eq!(position.hand[Color::White as usize][i], simple_position.hand[Color::White as usize][i]);
-                assert_eq!(position.hand[Color::Black as usize][i], simple_position.hand[Color::Black as usize][i]);
+                assert_eq!(
+                    position.hand[Color::White as usize][i],
+                    simple_position.hand[Color::White as usize][i]
+                );
+                assert_eq!(
+                    position.hand[Color::Black as usize][i],
+                    simple_position.hand[Color::Black as usize][i]
+                );
             }
             for i in 0..position.ply as usize {
                 assert_eq!(position.kif[i], simple_position.kif[i]);
                 assert_eq!(position.hash[i], simple_position.hash[i]);
             }
-            assert_eq!(position.pawn_flags[Color::White as usize], simple_position.pawn_flags[Color::White as usize]);
-            assert_eq!(position.pawn_flags[Color::Black as usize], simple_position.pawn_flags[Color::Black as usize]);
+            assert_eq!(
+                position.pawn_flags[Color::White as usize],
+                simple_position.pawn_flags[Color::White as usize]
+            );
+            assert_eq!(
+                position.pawn_flags[Color::Black as usize],
+                simple_position.pawn_flags[Color::Black as usize]
+            );
             for i in 0..Piece::BPawnX as usize + 1 {
                 assert_eq!(position.piece_bb[i], simple_position.piece_bb[i]);
             }
-            assert_eq!(position.player_bb[Color::White as usize], simple_position.player_bb[Color::White as usize]);
-            assert_eq!(position.player_bb[Color::Black as usize], simple_position.player_bb[Color::Black as usize]);
-            assert_eq!(position.adjacent_check_bb[position.ply as usize ], simple_position.adjacent_check_bb[position.ply as usize]);
-            assert_eq!(position.long_check_bb[position.ply as usize], simple_position.long_check_bb[position.ply as usize]);
+            assert_eq!(
+                position.player_bb[Color::White as usize],
+                simple_position.player_bb[Color::White as usize]
+            );
+            assert_eq!(
+                position.player_bb[Color::Black as usize],
+                simple_position.player_bb[Color::Black as usize]
+            );
+            assert_eq!(
+                position.adjacent_check_bb[position.ply as usize],
+                simple_position.adjacent_check_bb[position.ply as usize]
+            );
+            assert_eq!(
+                position.long_check_bb[position.ply as usize],
+                simple_position.long_check_bb[position.ply as usize]
+            );
 
             // ランダムに局面を進める
             if moves.len() == 0 {
