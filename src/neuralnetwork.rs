@@ -136,14 +136,18 @@ impl Position {
                 let index = (piece_to_sequential_index(self.board[i]) - 1) * 25 + i;
                 input_layer[offset + index] = 1.0;
             } else {
-                let index = (piece_to_sequential_index(self.board[i].get_op_piece()) - 1) * 25 + (SQUARE_NB - 1 - i);
+                let index = (piece_to_sequential_index(self.board[i].get_op_piece()) - 1) * 25
+                    + (SQUARE_NB - 1 - i);
                 input_layer[offset + index] = 1.0;
             }
         }
 
         for piece_type in HAND_PIECE_TYPE_ALL.iter() {
-            input_layer[25 * 19 * 25 + *piece_type as usize - 2] = self.hand[self.side_to_move as usize][*piece_type as usize - 2] as f32;
-            input_layer[25 * 19 * 25 + 5 + *piece_type as usize - 2] = self.hand[self.side_to_move.get_op_color() as usize][*piece_type as usize - 2] as f32;
+            input_layer[25 * 19 * 25 + *piece_type as usize - 2] =
+                self.hand[self.side_to_move as usize][*piece_type as usize - 2] as f32;
+            input_layer[25 * 19 * 25 + 5 + *piece_type as usize - 2] = self.hand
+                [self.side_to_move.get_op_color() as usize][*piece_type as usize - 2]
+                as f32;
         }
 
         if self.side_to_move == Color::Black {

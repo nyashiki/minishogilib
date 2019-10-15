@@ -299,7 +299,8 @@ impl MCTS {
 
                         if !self.game_tree[index].is_used {
                             let p = if dirichlet_noise {
-                                ((policy[policy_index] - policy_max).exp() / legal_policy_sum) * 0.75
+                                ((policy[policy_index] - policy_max).exp() / legal_policy_sum)
+                                    * 0.75
                                     + (noise[i] as f32) * 0.25
                             } else {
                                 (policy[policy_index] - policy_max).exp() / legal_policy_sum
