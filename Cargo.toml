@@ -1,6 +1,6 @@
 [package]
 name = "minishogilib"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["nyashiki"]
 
 [lib]
@@ -17,3 +17,4 @@ lazy_static = "0.2.1"
 bitintr = "0.3.0"
 ndarray = "0.12.1"
 numpy = "0.7.0"
+rayon = "1.2.0"
