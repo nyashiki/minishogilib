@@ -7,7 +7,7 @@ use bitboard::*;
 use r#move::*;
 use types::*;
 
-#[pyclass]
+#[pyclass(module = "Position")]
 #[derive(Copy, Clone)]
 pub struct Position {
     pub side_to_move: Color,
@@ -21,7 +21,7 @@ pub struct Position {
     pub piece_bb: [Bitboard; Piece::BPawnX as usize + 1],
     pub player_bb: [Bitboard; 2],
     pub adjacent_check_bb: [Bitboard; MAX_PLY + 1], // 近接駒による王手を表すbitboard
-    pub long_check_bb: [Bitboard; MAX_PLY + 1],     /* 長い利きを持つ駒による王手を表すbitboard */
+    pub long_check_bb: [Bitboard; MAX_PLY + 1],     // 長い利きを持つ駒による王手を表すbitboard
     pub sequent_check_count: [[i8; 2]; MAX_PLY + 1],
 }
 
@@ -238,17 +238,17 @@ impl Position {
     }
 
     pub fn set_start_position(&mut self) {
-        self.set_sfen_without_startpos("".to_string());
+        self.set_sfen_without_startpos("");
     }
 
-    pub fn set_sfen_without_startpos(&mut self, sfen: String) {
+    pub fn set_sfen_without_startpos(&mut self, sfen: &str) {
         static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
         let sfen_kif = format!("{} moves {}", START_POSITION_SFEN, sfen);
 
         self.set_sfen(&sfen_kif);
     }
 
-    pub fn set_sfen_without_startpos_simple(&mut self, sfen: String) {
+    pub fn set_sfen_without_startpos_simple(&mut self, sfen: &str) {
         static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
         let sfen_kif = format!("{} moves {}", START_POSITION_SFEN, sfen);
 
