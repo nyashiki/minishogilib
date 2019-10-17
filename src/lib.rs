@@ -20,13 +20,18 @@ use pyo3::wrap_pyfunction;
 use rayon::prelude::*;
 
 #[pyfunction]
-pub fn get_positions_from_sfen_without_startpos(sfen_kifs: std::vec::Vec<String>) -> std::vec::Vec<position::Position> {
-    let positions = sfen_kifs.par_iter().map(|x| {
+pub fn get_positions_from_sfen_without_startpos(
+    sfen_kifs: std::vec::Vec<String>,
+) -> std::vec::Vec<position::Position> {
+    let positions = sfen_kifs
+        .par_iter()
+        .map(|x| {
             let mut position = position::Position::empty_board();
             position.set_sfen_without_startpos(x);
 
             position
-        }).collect();
+        })
+        .collect();
 
     return positions;
 }

@@ -343,8 +343,7 @@ impl Position {
 
                 // 二歩フラグの更新
                 if m.capture_piece.get_piece_type() == PieceType::Pawn {
-                    self.pawn_flags[self.side_to_move.get_op_color() as usize] ^=
-                        1 << (m.to % 5);
+                    self.pawn_flags[self.side_to_move.get_op_color() as usize] ^= 1 << (m.to % 5);
                 }
 
                 // hashの更新

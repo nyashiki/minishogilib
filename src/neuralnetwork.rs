@@ -77,17 +77,26 @@ impl Position {
             for piece_type in HAND_PIECE_TYPE_ALL.iter() {
                 if position.hand[self.side_to_move as usize][*piece_type as usize - 2] > 0 {
                     for i in 0..SQUARE_NB {
-                        input_layer[(2 + h * CHANNEL_NUM_PER_HISTORY + 23 + *piece_type as usize
+                        input_layer[(2
+                            + h * CHANNEL_NUM_PER_HISTORY
+                            + 23
+                            + *piece_type as usize
                             - 2)
                             * SQUARE_NB
-                            + i] =
-                            position.hand[self.side_to_move as usize][*piece_type as usize - 2] as f32;
+                            + i] = position.hand[self.side_to_move as usize]
+                            [*piece_type as usize - 2] as f32;
                     }
                 }
 
-                if position.hand[self.side_to_move.get_op_color() as usize][*piece_type as usize - 2] > 0 {
+                if position.hand[self.side_to_move.get_op_color() as usize]
+                    [*piece_type as usize - 2]
+                    > 0
+                {
                     for i in 0..SQUARE_NB {
-                        input_layer[(2 + h * CHANNEL_NUM_PER_HISTORY + 28 + *piece_type as usize
+                        input_layer[(2
+                            + h * CHANNEL_NUM_PER_HISTORY
+                            + 28
+                            + *piece_type as usize
                             - 2)
                             * SQUARE_NB
                             + i] = position.hand[self.side_to_move.get_op_color() as usize]
