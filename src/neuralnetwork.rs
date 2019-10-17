@@ -71,19 +71,28 @@ impl Position {
                 input_layer[(2 + h * CHANNEL_NUM_PER_HISTORY + 20 + position.get_repetition())
                     * SQUARE_NB
                     + i] = 1f32;
+            }
 
-                // 持ち駒を設定
-                for piece_type in HAND_PIECE_TYPE_ALL.iter() {
-                    input_layer[(2 + h * CHANNEL_NUM_PER_HISTORY + 23 + *piece_type as usize
-                        - 2)
-                        * SQUARE_NB
-                        + i] =
-                        position.hand[self.side_to_move as usize][*piece_type as usize - 2] as f32;
-                    input_layer[(2 + h * CHANNEL_NUM_PER_HISTORY + 28 + *piece_type as usize
-                        - 2)
-                        * SQUARE_NB
-                        + i] = position.hand[self.side_to_move.get_op_color() as usize]
-                        [*piece_type as usize - 2] as f32;
+            // 持ち駒を設定
+            for piece_type in HAND_PIECE_TYPE_ALL.iter() {
+                if position.hand[self.side_to_move as usize][*piece_type as usize - 2] > 0 {
+                    for i in 0..SQUARE_NB {
+                        input_layer[(2 + h * CHANNEL_NUM_PER_HISTORY + 23 + *piece_type as usize
+                            - 2)
+                            * SQUARE_NB
+                            + i] =
+                            position.hand[self.side_to_move as usize][*piece_type as usize - 2] as f32;
+                    }
+                }
+
+                if position.hand[self.side_to_move.get_op_color() as usize][*piece_type as usize - 2] > 0 {
+                    for i in 0..SQUARE_NB {
+                        input_layer[(2 + h * CHANNEL_NUM_PER_HISTORY + 28 + *piece_type as usize
+                            - 2)
+                            * SQUARE_NB
+                            + i] = position.hand[self.side_to_move.get_op_color() as usize]
+                            [*piece_type as usize - 2] as f32;
+                    }
                 }
             }
 
@@ -92,13 +101,15 @@ impl Position {
             }
         }
 
-        for i in 0..SQUARE_NB {
-            // 手番を設定
-            if self.side_to_move == Color::Black {
+        // 手番を設定
+        if self.side_to_move == Color::Black {
+            for i in 0..SQUARE_NB {
                 input_layer[i] = 1f32;
             }
+        }
 
-            // 手数を設定
+        // 手数を設定
+        for i in 0..SQUARE_NB {
             input_layer[SQUARE_NB + i] = self.ply as f32;
         }
 

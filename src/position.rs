@@ -319,15 +319,13 @@ impl Position {
             self.board[m.to as usize] = m.piece;
             self.hand[self.side_to_move as usize][m.piece.get_piece_type() as usize - 2] -= 1;
 
-            if incremental_update {
-                // Bitboardの更新
-                self.piece_bb[m.piece as usize] |= 1 << m.to;
-                self.player_bb[self.side_to_move as usize] |= 1 << m.to;
+            // Bitboardの更新
+            self.piece_bb[m.piece as usize] |= 1 << m.to;
+            self.player_bb[self.side_to_move as usize] |= 1 << m.to;
 
-                // 二歩フラグの更新
-                if m.piece.get_piece_type() == PieceType::Pawn {
-                    self.pawn_flags[self.side_to_move as usize] |= 1 << (m.to % 5);
-                }
+            // 二歩フラグの更新
+            if m.piece.get_piece_type() == PieceType::Pawn {
+                self.pawn_flags[self.side_to_move as usize] |= 1 << (m.to % 5);
             }
 
             // hash値の更新
@@ -339,16 +337,14 @@ impl Position {
                 self.hand[self.side_to_move as usize]
                     [m.capture_piece.get_piece_type().get_raw() as usize - 2] += 1;
 
-                if incremental_update {
-                    // Bitboardの更新
-                    self.piece_bb[m.capture_piece as usize] ^= 1 << m.to;
-                    self.player_bb[self.side_to_move.get_op_color() as usize] ^= 1 << m.to;
+                // Bitboardの更新
+                self.piece_bb[m.capture_piece as usize] ^= 1 << m.to;
+                self.player_bb[self.side_to_move.get_op_color() as usize] ^= 1 << m.to;
 
-                    // 二歩フラグの更新
-                    if m.capture_piece.get_piece_type() == PieceType::Pawn {
-                        self.pawn_flags[self.side_to_move.get_op_color() as usize] ^=
-                            1 << (m.to % 5);
-                    }
+                // 二歩フラグの更新
+                if m.capture_piece.get_piece_type() == PieceType::Pawn {
+                    self.pawn_flags[self.side_to_move.get_op_color() as usize] ^=
+                        1 << (m.to % 5);
                 }
 
                 // hashの更新
@@ -359,11 +355,9 @@ impl Position {
             if m.promotion {
                 self.board[m.to as usize] = m.piece.get_promoted();
 
-                if incremental_update {
-                    // 二歩フラグの更新
-                    if m.piece.get_piece_type() == PieceType::Pawn {
-                        self.pawn_flags[self.side_to_move as usize] ^= 1 << (m.to % 5);
-                    }
+                // 二歩フラグの更新
+                if m.piece.get_piece_type() == PieceType::Pawn {
+                    self.pawn_flags[self.side_to_move as usize] ^= 1 << (m.to % 5);
                 }
             } else {
                 self.board[m.to as usize] = m.piece;
@@ -371,15 +365,13 @@ impl Position {
 
             self.board[m.from as usize] = Piece::NoPiece;
 
-            if incremental_update {
-                // Bitboardの更新
-                // 移動先
-                self.piece_bb[self.board[m.to as usize] as usize] |= 1 << m.to;
-                self.player_bb[self.side_to_move as usize] |= 1 << m.to;
-                // 移動元
-                self.piece_bb[m.piece as usize] ^= 1 << m.from;
-                self.player_bb[self.side_to_move as usize] ^= 1 << m.from;
-            }
+            // Bitboardの更新
+            // 移動先
+            self.piece_bb[self.board[m.to as usize] as usize] |= 1 << m.to;
+            self.player_bb[self.side_to_move as usize] |= 1 << m.to;
+            // 移動元
+            self.piece_bb[m.piece as usize] ^= 1 << m.from;
+            self.player_bb[self.side_to_move as usize] ^= 1 << m.from;
 
             // hash値の更新
             self.hash[self.ply as usize + 1] ^= ::zobrist::BOARD_TABLE[m.from][m.piece as usize];
@@ -449,23 +441,23 @@ impl Position {
             }
         } else {
             // 盤上の駒を動かした場合
+            assert!(self.board[m.to as usize] != Piece::NoPiece);
 
             // Bitboardのundo
             // 移動先
-            assert!(self.board[m.to as usize] != Piece::NoPiece);
             self.piece_bb[self.board[m.to as usize] as usize] ^= 1 << m.to;
             self.player_bb[self.side_to_move as usize] ^= 1 << m.to;
             // 移動元
             self.piece_bb[m.piece as usize] |= 1 << m.from;
             self.player_bb[self.side_to_move as usize] |= 1 << m.from;
 
-            self.board[m.to as usize] = m.capture_piece;
-            self.board[m.from as usize] = m.piece;
-
             // 二歩フラグのundo
             if m.piece.get_piece_type() == PieceType::Pawn && m.promotion {
                 self.pawn_flags[self.side_to_move as usize] |= 1 << (m.to % 5);
             }
+
+            self.board[m.to as usize] = m.capture_piece;
+            self.board[m.from as usize] = m.piece;
 
             // 相手の駒を取っていた場合には、持ち駒から減らす
             if m.capture_piece != Piece::NoPiece {
