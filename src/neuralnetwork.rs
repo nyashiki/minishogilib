@@ -118,14 +118,16 @@ impl Position {
 
     /// 11888要素のベクトルの形式で返す
     /// 25 * 19 * 25: 自分の玉の場所 * 自分の玉以外の駒の種類と場所
+    /// 25 * 19 * 25: 相手の玉の場所 * 相手の玉以外の駒の種類と場所
     /// 5 * 2       : 持ち駒の数
     /// 1           : 手番
     /// 1           : 手数
     /// 1           : 繰り返し回数
     pub fn to_kp_input(&self, py: Python) -> Py<PyArray1<f32>> {
-        const INPUT_NUM: usize = 25 * 19 * 25 + 5 * 2 + 1 + 1 + 1;
+        const INPUT_NUM: usize = (25 * 19 * 25) * 2 + 5 * 2 + 1 + 1 + 1;
         let mut input_layer = [0f32; INPUT_NUM];
 
+        // 自分の玉に関するKP
         let my_king_square = if self.side_to_move == Color::White {
             ::bitboard::get_square(self.piece_bb[Piece::WKing as usize])
         } else {
@@ -153,20 +155,55 @@ impl Position {
             }
         }
 
+        // 相手の玉に関するKP
+        let op_king_square = if self.side_to_move == Color::White {
+            ::bitboard::get_square(self.piece_bb[Piece::BKing as usize])
+        } else {
+            ::bitboard::get_square(self.piece_bb[Piece::WKing as usize])
+        };
+
+        let offset = if self.side_to_move == Color::White {
+            25 * 19 * 25 + op_king_square * 19 * 25
+        } else {
+            25 * 19 * 25 + (SQUARE_NB - 1 - op_king_square) * 19 * 25
+        };
+
+        for i in 0..SQUARE_NB {
+            if i == op_king_square || self.board[i] == Piece::NoPiece {
+                continue;
+            }
+
+            if self.side_to_move == Color::White {
+                let index = if (self.board[i] as u8) < (Piece::BKing as u8) {
+                    piece_to_sequential_index(self.board[i]) * 25 + i
+                } else {
+                    (piece_to_sequential_index(self.board[i]) - 1) * 25 + i
+                };
+                input_layer[offset + index] = 1.0;
+            } else {
+                let index = if (self.board[i] as u8) < (Piece::BKing as u8) {
+                    piece_to_sequential_index(self.board[i]) * 25 + (SQUARE_NB - 1 - i)
+                } else {
+                    (piece_to_sequential_index(self.board[i]) - 1) * 25 + (SQUARE_NB - 1 - i)
+                };
+                input_layer[offset + index] = 1.0;
+            }
+        }
+
         for piece_type in HAND_PIECE_TYPE_ALL.iter() {
-            input_layer[25 * 19 * 25 + *piece_type as usize - 2] =
+            input_layer[25 * 19 * 25 * 2 + *piece_type as usize - 2] =
                 self.hand[self.side_to_move as usize][*piece_type as usize - 2] as f32;
-            input_layer[25 * 19 * 25 + 5 + *piece_type as usize - 2] = self.hand
+            input_layer[25 * 19 * 25 * 2 + 5 + *piece_type as usize - 2] = self.hand
                 [self.side_to_move.get_op_color() as usize][*piece_type as usize - 2]
                 as f32;
         }
 
         if self.side_to_move == Color::Black {
-            input_layer[25 * 19 * 25 + 5 * 2] = 1.0;
+            input_layer[25 * 19 * 25 * 2 + 5 * 2] = 1.0;
         }
 
-        input_layer[25 * 19 * 25 + 5 * 2 + 1] = self.ply as f32;
-        input_layer[25 * 19 * 25 + 5 * 2 + 2] = self.get_repetition() as f32;
+        input_layer[25 * 19 * 25 * 2 + 5 * 2 + 1] = self.ply as f32;
+        input_layer[25 * 19 * 25 * 2 + 5 * 2 + 2] = self.get_repetition() as f32;
 
         return PyArray1::from_slice(py, &input_layer).to_owned();
     }
