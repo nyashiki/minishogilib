@@ -4,7 +4,8 @@ use std::fs::File;
 
 use numpy::PyArray1;
 use pyo3::prelude::*;
-use rand::{distributions::Uniform, Rng}; // 0.7.0
+use rand::{distributions::Uniform, Rng};
+use rayon::prelude::*;
 use record::*;
 use position::*;
 
@@ -73,7 +74,7 @@ impl Reservoir {
             while ng - ok > 1 {
                 let mid = (ok + ng) / 2;
 
-                if indicies[i] >= cumulative_plys[ok] {
+                if indicies[i] >= cumulative_plys[mid] {
                     ok = mid;
                 } else {
                     ng = mid;
@@ -86,7 +87,7 @@ impl Reservoir {
             lo = ok;
         }
 
-        let mut ins = vec![0f32; mini_batch_size * (8 * 33 + 2)];
+        let mut ins = vec![0f32; mini_batch_size * (8 * 33 + 2) * 5 * 5];
         let mut policies = vec![0f32; mini_batch_size * (69 * 5 * 5)];
         let mut values = vec![0f32; mini_batch_size];
 
@@ -95,13 +96,19 @@ impl Reservoir {
             let ply = targets[b].1;
 
             // Input.
-            let sfen_kif = self.records[index].sfen_kif[..ply].join(" ");
             let mut position = Position::empty_board();
-            position.set_sfen(&sfen_kif);
+            position.set_start_position();
+            let sfen_moves = &self.records[index].sfen_kif[..ply];
+            for m in sfen_moves {
+                let m = position.sfen_to_move(m);
+                position.do_move(&m);
+            }
+
             let nninput = position.to_alphazero_input_array();
 
-            for i in 0..8 * 33 + 2 {
-                ins[b * (8 * 33 + 2) + i] = nninput[i];
+            {
+                let (left, _right) = ins[(b * (8 * 33 + 2) * 5 * 5)..].split_at_mut((8 * 33 + 2) * 5 * 5);
+                left.clone_from_slice(&nninput);
             }
 
             // Policy.
