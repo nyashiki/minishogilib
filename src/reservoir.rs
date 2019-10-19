@@ -1,4 +1,6 @@
 use std::collections::VecDeque;
+use std::io::{BufRead, BufReader};
+use std::fs::File;
 
 use pyo3::prelude::*;
 use record::*;
@@ -23,16 +25,26 @@ impl Reservoir {
         });
     }
 
-
     pub fn push(&mut self, record_json: &str) {
         if self.records.len() == self.max_size {
             self.records.pop_front();
             self.learning_targets.pop_front();
         }
 
-        // self.records.push_back(record);
-        // self.learning_targets.push_back(record.learning_target_plys);
+        let record = Record::from_json(record_json);
+
+        self.records.push_back(record.clone());
+        self.learning_targets.push_back(record.learning_target_plys);
 
         // ToDo: Write log.
+    }
+
+    pub fn load_json(&mut self, path: &str) {
+        let file = File::open(path).expect("The file does not exist.");
+        let file = BufReader::new(file);
+
+        for line in file.lines().filter_map(|x| x.ok()) {
+            self.push(&line);
+        }
     }
 }

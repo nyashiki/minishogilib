@@ -3,14 +3,14 @@ use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[pyclass]
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Record {
-    ply: u16,
-    sfen_kif: std::vec::Vec<String>,
-    mcts_result: (u32, f32, std::vec::Vec<(String, u32)>),
-    learning_target_plys: std::vec::Vec<usize>,
-    winner: u8,
-    timestamp: u32
+    pub ply: u16,
+    pub sfen_kif: std::vec::Vec<String>,
+    pub mcts_result: (u32, f32, std::vec::Vec<(String, u32)>),
+    pub learning_target_plys: std::vec::Vec<usize>,
+    pub winner: u8,
+    pub timestamp: u32
 }
 
 impl Record {
