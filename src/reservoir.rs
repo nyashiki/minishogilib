@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::fs::OpenOptions;
+use std::io::{BufRead, BufReader, Write};
 
 use numpy::PyArray1;
 use pyo3::prelude::*;
@@ -40,7 +41,9 @@ impl Reservoir {
         self.records.push_back(record.clone());
         self.learning_targets.push_back(record.learning_target_plys);
 
-        // ToDo: Write log.
+        let mut file = OpenOptions::new().create(true).append(true).open(&self.json_path).unwrap();
+        file.write(record_json.as_bytes()).unwrap();
+        file.write(b"\n").unwrap();
     }
 
     pub fn load_json(&mut self, path: &str) {
