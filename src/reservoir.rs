@@ -132,7 +132,7 @@ impl Reservoir {
         let mut policies = std::vec::Vec::with_capacity(mini_batch_size * 69 * 5 * 5);
         let mut values = std::vec::Vec::with_capacity(mini_batch_size);
 
-        for (b, batch) in data.iter().enumerate() {
+        for (_b, batch) in data.iter().enumerate() {
             ins.extend_from_slice(&batch.0);
             policies.extend_from_slice(&batch.1);
             values.push(batch.2);
