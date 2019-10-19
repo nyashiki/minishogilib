@@ -5,6 +5,8 @@ extern crate numpy;
 extern crate pyo3;
 extern crate rand;
 extern crate rayon;
+extern crate serde;
+extern crate serde_json;
 
 pub mod bitboard;
 pub mod checkmate;
@@ -12,6 +14,8 @@ pub mod mcts;
 pub mod r#move;
 pub mod neuralnetwork;
 pub mod position;
+pub mod record;
+pub mod reservoir;
 pub mod types;
 pub mod zobrist;
 
