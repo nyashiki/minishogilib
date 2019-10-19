@@ -261,12 +261,12 @@ impl Position {
             let piece = char_to_piece(sfen.as_bytes()[0] as char)
                 .get_piece_type()
                 .get_piece(self.side_to_move);
-            let to = sfen_to_square(sfen[2..4].to_string());
+            let to = sfen_to_square(&sfen[2..4]);
 
             Move::hand_move(piece, to)
         } else {
-            let from = sfen_to_square(sfen[0..2].to_string());
-            let to = sfen_to_square(sfen[2..4].to_string());
+            let from = sfen_to_square(&sfen[0..2]);
+            let to = sfen_to_square(&sfen[2..4]);
             let promotion = sfen.len() == 5;
             let piece = self.board[from];
             let (direction, amount) = get_relation(from, to);
