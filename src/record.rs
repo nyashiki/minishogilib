@@ -18,3 +18,10 @@ impl Record {
         serde_json::from_str(record_json).unwrap()
     }
 }
+
+#[pymethods]
+impl Record {
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
+}
