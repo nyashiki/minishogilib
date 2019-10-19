@@ -2,9 +2,11 @@ use std::collections::VecDeque;
 use std::io::{BufRead, BufReader};
 use std::fs::File;
 
+use numpy::PyArray1;
 use pyo3::prelude::*;
 use rand::{distributions::Uniform, Rng}; // 0.7.0
 use record::*;
+use position::*;
 
 #[pyclass]
 pub struct Reservoir {
@@ -49,7 +51,7 @@ impl Reservoir {
         }
     }
 
-    pub fn sample(&self, mini_batch_size: usize) {
+    pub fn sample(&self, py: Python, mini_batch_size: usize) -> (Py<PyArray1<f32>>, Py<PyArray1<f32>>, Py<PyArray1<f32>>) {
         let mut cumulative_plys = vec![0; self.max_size + 1];
 
         for i in 0..self.max_size {
@@ -61,7 +63,7 @@ impl Reservoir {
 
         indicies.sort();
 
-        let mut target_plys = vec![(0, 0); mini_batch_size];
+        let mut targets = vec![(0, 0); mini_batch_size];
 
         let mut lo = 0;
         for i in 0..mini_batch_size {
@@ -79,9 +81,51 @@ impl Reservoir {
             }
 
             let ply = self.learning_targets[ok][indicies[i] - cumulative_plys[ok]];
-            target_plys[i] = (ok, ply);
+            targets[i] = (ok, ply);
 
             lo = ok;
         }
+
+        let mut ins = vec![0f32; mini_batch_size * (8 * 33 + 2)];
+        let mut policies = vec![0f32; mini_batch_size * (69 * 5 * 5)];
+        let mut values = vec![0f32; mini_batch_size];
+
+        for b in 0..mini_batch_size {
+            let index = targets[b].0;
+            let ply = targets[b].1;
+
+            // Input.
+            let sfen_kif = self.records[index].sfen_kif[..ply].join(" ");
+            let mut position = Position::empty_board();
+            position.set_sfen(&sfen_kif);
+            let nninput = position.to_alphazero_input_array();
+
+            for i in 0..8 * 33 + 2 {
+                ins[b * (8 * 33 + 2) + i] = nninput[i];
+            }
+
+            // Policy.
+            let (sum_n, _q, playouts) = &self.records[index].mcts_result[ply];
+
+            for playout in playouts {
+                let m = position.sfen_to_move(&playout.0);
+                let n = playout.1;
+
+                policies[b * (69 * 5 * 5) + m.to_policy_index()] = n as f32 / *sum_n as f32;
+            }
+
+            // Value.
+            values[b] = if self.records[index].winner == 2 {
+                0.0
+            } else if self.records[index].winner == position.get_side_to_move() {
+                1.0
+            } else {
+                -1.0
+            };
+        }
+
+        (PyArray1::from_slice(py, &ins).to_owned(),
+         PyArray1::from_slice(py, &policies).to_owned(),
+         PyArray1::from_slice(py, &values).to_owned())
     }
 }
