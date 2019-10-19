@@ -30,7 +30,7 @@ impl Reservoir {
         });
     }
 
-    pub fn push(&mut self, record_json: &str) {
+    pub fn push_with_option(&mut self, record_json: &str, log: bool) {
         if self.records.len() == self.max_size {
             self.records.pop_front();
             self.learning_targets.pop_front();
@@ -41,17 +41,23 @@ impl Reservoir {
         self.records.push_back(record.clone());
         self.learning_targets.push_back(record.learning_target_plys);
 
-        let mut file = OpenOptions::new().create(true).append(true).open(&self.json_path).unwrap();
-        file.write(record_json.as_bytes()).unwrap();
-        file.write(b"\n").unwrap();
+        if log {
+            let mut file = OpenOptions::new().create(true).append(true).open(&self.json_path).unwrap();
+            file.write(record_json.as_bytes()).unwrap();
+            file.write(b"\n").unwrap();
+        }
     }
 
-    pub fn load_json(&mut self, path: &str) {
-        let file = File::open(path).expect("The file does not exist.");
+    pub fn push(&mut self, record_json: &str) {
+        self.push_with_option(record_json, true);
+    }
+
+    pub fn load(&mut self, path: &str) {
+        let file = File::open(path).unwrap();
         let file = BufReader::new(file);
 
         for line in file.lines().filter_map(|x| x.ok()) {
-            self.push(&line);
+            self.push_with_option(&line, false);
         }
     }
 
