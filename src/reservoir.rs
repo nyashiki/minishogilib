@@ -121,7 +121,7 @@ impl Reservoir {
 
             let nninput = position.to_alphazero_input_array();
 
-            let mut policy = vec![0f32; 69 * 5 * 5];
+            let mut policy = [0f32; 69 * 5 * 5];
             // Policy.
             let (sum_n, _q, playouts) = &self.records[index].mcts_result[ply];
 
@@ -147,24 +147,37 @@ impl Reservoir {
         let end = start.elapsed();
         println!("sample {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
 
-        let mut ins = vec![0f32; mini_batch_size * (8 * 33 + 2) * 5 * 5];
-        let mut policies = vec![0f32; mini_batch_size * (69 * 5 * 5)];
-        let mut values = vec![0f32; mini_batch_size];
+        let mut ins = std::vec::Vec::with_capacity(mini_batch_size * (8 * 33 + 2) * 5 * 5);
+        let mut policies = std::vec::Vec::with_capacity(mini_batch_size * 69 * 5 * 5);
+        let mut values = std::vec::Vec::with_capacity(mini_batch_size);
 
-        for (i, batch) in data.iter().enumerate() {
-            /*
-            let (left, _right) = ins[(i * (8 * 33 + 2) * 5 * 5)..].split_at_mut((8 * 33 + 2) * 5 * 5);
-            left.clone_from_slice(&batch.0);
+        let end = start.elapsed();
+        println!("allocate {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
 
-            let (left, _right) = policies[(i * 69 * 5 * 5)..].split_at_mut(69 * 5 * 5);
-            left.clone_from_slice(&batch.1);
-            */
-
-            values[i] = batch.2;
+        for (b, batch) in data.iter().enumerate() {
+            ins.extend_from_slice(&batch.0);
+            policies.extend_from_slice(&batch.1);
+            values.push(batch.2);
         }
 
         let end = start.elapsed();
         println!("copy {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
+
+
+        let index = targets[3].0;
+        let ply = targets[3].1;
+
+        let mut position = Position::empty_board();
+        position.set_start_position();
+        for (i, m) in self.records[index].sfen_kif.iter().enumerate() {
+            if i == ply {
+                break;
+            }
+
+            let m = position.sfen_to_move(m);
+            position.do_move(&m);
+        }
+        position.print();
 
         let end = start.elapsed();
 
