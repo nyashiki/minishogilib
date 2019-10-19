@@ -9,8 +9,6 @@ use rayon::prelude::*;
 use record::*;
 use position::*;
 
-use std::time::{Duration, Instant};
-
 #[pyclass]
 pub struct Reservoir {
     records: VecDeque<Record>,
@@ -55,24 +53,16 @@ impl Reservoir {
     }
 
     pub fn sample(&self, py: Python, mini_batch_size: usize) -> (Py<PyArray1<f32>>, Py<PyArray1<f32>>, Py<PyArray1<f32>>) {
-        let start = Instant::now();
-
         let mut cumulative_plys = vec![0; self.max_size + 1];
 
         for i in 0..self.max_size {
             cumulative_plys[i + 1] = cumulative_plys[i] + self.learning_targets[i].len();
         }
 
-        let end = start.elapsed();
-        println!("cumulative {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
-
         let range = Uniform::from(0..cumulative_plys[self.max_size]);
         let mut indicies: std::vec::Vec<usize> = rand::thread_rng().sample_iter(&range).take(mini_batch_size).collect();
 
         indicies.sort();
-
-        let end = start.elapsed();
-        println!("sort {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
 
         let mut targets = vec![(0, 0); mini_batch_size];
 
@@ -96,12 +86,6 @@ impl Reservoir {
 
             lo = ok;
         }
-
-        let end = start.elapsed();
-        println!("targets {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
-
-        let end = start.elapsed();
-        println!("allocate {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
 
         let data: std::vec::Vec<_> = targets.par_iter().map(move |&target| {
             let index = target.0;
@@ -144,42 +128,15 @@ impl Reservoir {
             (nninput, policy, value)
         }).collect();
 
-        let end = start.elapsed();
-        println!("sample {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
-
         let mut ins = std::vec::Vec::with_capacity(mini_batch_size * (8 * 33 + 2) * 5 * 5);
         let mut policies = std::vec::Vec::with_capacity(mini_batch_size * 69 * 5 * 5);
         let mut values = std::vec::Vec::with_capacity(mini_batch_size);
-
-        let end = start.elapsed();
-        println!("allocate {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
 
         for (b, batch) in data.iter().enumerate() {
             ins.extend_from_slice(&batch.0);
             policies.extend_from_slice(&batch.1);
             values.push(batch.2);
         }
-
-        let end = start.elapsed();
-        println!("copy {}.{:03} sec", end.as_secs(), end.subsec_nanos() / 1000000);
-
-
-        let index = targets[3].0;
-        let ply = targets[3].1;
-
-        let mut position = Position::empty_board();
-        position.set_start_position();
-        for (i, m) in self.records[index].sfen_kif.iter().enumerate() {
-            if i == ply {
-                break;
-            }
-
-            let m = position.sfen_to_move(m);
-            position.do_move(&m);
-        }
-        position.print();
-
-        let end = start.elapsed();
 
         (PyArray1::from_slice(py, &ins).to_owned(),
          PyArray1::from_slice(py, &policies).to_owned(),
