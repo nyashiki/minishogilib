@@ -20,7 +20,6 @@ pub mod types;
 pub mod zobrist;
 
 use pyo3::prelude::*;
-use pyo3::wrap_pyfunction;
 use rayon::prelude::*;
 
 

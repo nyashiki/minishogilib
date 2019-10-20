@@ -2,8 +2,6 @@ use std::collections::VecDeque;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, Write};
-use std::sync::{Arc, Mutex};
-use std::thread;
 
 use numpy::PyArray1;
 use pyo3::prelude::*;
@@ -18,8 +16,6 @@ pub struct Reservoir {
     learning_targets: VecDeque<std::vec::Vec<usize>>,
     json_path: String,
     max_size: usize,
-    write_count: Arc<Mutex<u16>>,
-    read_count: Arc<Mutex<u16>>
 }
 
 #[pymethods]
@@ -31,8 +27,6 @@ impl Reservoir {
             learning_targets: VecDeque::new(),
             json_path: json_path.to_string(),
             max_size: max_size,
-            write_count: Arc::new(Mutex::new(0)),
-            read_count: Arc::new(Mutex::new(0)),
         });
     }
 
@@ -55,20 +49,7 @@ impl Reservoir {
     }
 
     pub fn push(&mut self, record_json: &str) {
-        let write_count = self.write_count.clone();
-        let read_count = self.read_count.clone();
-
-        while true {
-            if *write_count.lock().unwrap() == 0 && *read_count.lock().unwrap() == 0 {
-
-                *write_count.lock().unwrap() += 1;
-                break;
-            }
-        }
-
         self.push_with_option(record_json, true);
-
-        *write_count.lock().unwrap() -= 1;
     }
 
     pub fn load(&mut self, path: &str) {
@@ -81,26 +62,10 @@ impl Reservoir {
     }
 
     pub fn sample(&self, py: Python, mini_batch_size: usize) -> (Py<PyArray1<f32>>, Py<PyArray1<f32>>, Py<PyArray1<f32>>) {
-        let write_count = self.write_count.clone();
-        let read_count = self.read_count.clone();
-
-        while true {
-            if *write_count.lock().unwrap() == 0 {
-
-                *read_count.lock().unwrap() += 1;
-                break;
-            }
-        }
-
-        let records = self.records.clone();
-        let learning_targets = self.learning_targets.clone();
-
-        *read_count.lock().unwrap() -= 1;
-
         let mut cumulative_plys = vec![0; self.max_size + 1];
 
         for i in 0..self.max_size {
-            cumulative_plys[i + 1] = cumulative_plys[i] + learning_targets[i].len();
+            cumulative_plys[i + 1] = cumulative_plys[i] + self.learning_targets[i].len();
         }
 
         let range = Uniform::from(0..cumulative_plys[self.max_size]);
@@ -125,7 +90,7 @@ impl Reservoir {
                 }
             }
 
-            let ply = learning_targets[ok][indicies[i] - cumulative_plys[ok]];
+            let ply = self.learning_targets[ok][indicies[i] - cumulative_plys[ok]];
             targets[i] = (ok, ply);
 
             lo = ok;
@@ -138,7 +103,7 @@ impl Reservoir {
             let mut position = Position::empty_board();
             position.set_start_position();
 
-            for (i, m) in records[index].sfen_kif.iter().enumerate() {
+            for (i, m) in self.records[index].sfen_kif.iter().enumerate() {
                 if i == ply {
                     break;
                 }
@@ -151,7 +116,7 @@ impl Reservoir {
 
             let mut policy = [0f32; 69 * 5 * 5];
             // Policy.
-            let (sum_n, _q, playouts) = &records[index].mcts_result[ply];
+            let (sum_n, _q, playouts) = &self.records[index].mcts_result[ply];
 
             for playout in playouts {
                 let m = position.sfen_to_move(&playout.0);
@@ -161,9 +126,9 @@ impl Reservoir {
             }
 
             // Value.
-            let value = if records[index].winner == 2 {
+            let value = if self.records[index].winner == 2 {
                 0.0
-            } else if records[index].winner == position.get_side_to_move() {
+            } else if self.records[index].winner == position.get_side_to_move() {
                 1.0
             } else {
                 -1.0
