@@ -189,6 +189,10 @@ impl MCTS {
         return self.node_used_count as f32 / self.size as f32;
     }
 
+    pub fn get_nodes(&self) -> usize {
+        return self.node_used_count;
+    }
+
     pub fn select_leaf(
         &mut self,
         root_node: usize,
