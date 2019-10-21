@@ -222,7 +222,7 @@ impl Position {
                     break;
                 }
 
-                let m = self.sfen_to_move(sfen_move.unwrap().to_string());
+                let m = self.sfen_to_move(sfen_move.unwrap());
                 self._do_move_with_option(&m, incremental_update);
             }
         }
@@ -256,17 +256,17 @@ impl Position {
     }
 
     /// sfen形式での指し手をMove構造体に変換する
-    pub fn sfen_to_move(&self, sfen: String) -> Move {
+    pub fn sfen_to_move(&self, sfen: &str) -> Move {
         if sfen.as_bytes()[1] as char == '*' {
             let piece = char_to_piece(sfen.as_bytes()[0] as char)
                 .get_piece_type()
                 .get_piece(self.side_to_move);
-            let to = sfen_to_square(sfen[2..4].to_string());
+            let to = sfen_to_square(&sfen[2..4]);
 
             Move::hand_move(piece, to)
         } else {
-            let from = sfen_to_square(sfen[0..2].to_string());
-            let to = sfen_to_square(sfen[2..4].to_string());
+            let from = sfen_to_square(&sfen[0..2]);
+            let to = sfen_to_square(&sfen[2..4]);
             let promotion = sfen.len() == 5;
             let piece = self.board[from];
             let (direction, amount) = get_relation(from, to);
@@ -276,8 +276,8 @@ impl Position {
         }
     }
 
-    pub fn get_side_to_move(&self) -> usize {
-        return self.side_to_move as usize;
+    pub fn get_side_to_move(&self) -> u8 {
+        return self.side_to_move as u8;
     }
 
     pub fn generate_moves(&self) -> std::vec::Vec<Move> {

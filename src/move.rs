@@ -169,7 +169,7 @@ pub fn square_to_csa_sfen(square: usize) -> String {
     )
 }
 
-pub fn sfen_to_square(sfen: String) -> usize {
+pub fn sfen_to_square(sfen: &str) -> usize {
     ((sfen.as_bytes()[1] - ('a' as u8)) * 5 + (('5' as u8) - sfen.as_bytes()[0])) as usize
 }
 
