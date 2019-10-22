@@ -341,22 +341,15 @@ impl MCTS {
         return value;
     }
 
-    pub fn backpropagate(&mut self, leaf_position: &mut Position, leaf_node: usize, value: f32) {
+    pub fn backpropagate(&mut self, leaf_node: usize, value: f32) {
         let mut node = leaf_node;
         let mut flip = false;
 
-        loop {
+        while node != 0 {
             self.game_tree[node].w += if !flip { value } else { 1.0 - value };
             self.game_tree[node].n += 1;
             self.game_tree[node].virtual_loss -= 1.0;
-
             node = self.game_tree[node].parent;
-
-            if node == 0 {
-                break;
-            }
-
-            leaf_position.undo_move();
             flip = !flip;
         }
     }
