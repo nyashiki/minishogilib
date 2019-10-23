@@ -39,8 +39,14 @@ fn attack(position: &mut Position, depth: i32) -> (bool, Move) {
             continue;
         }
 
-        let (repetition, _) = position.is_repetition();
+        let (repetition, check_repetition) = position.is_repetition();
+
         if repetition {
+            if !check_repetition && position.side_to_move == Color::White {
+                position.undo_move();
+                return (true, *m);
+            }
+
             position.undo_move();
             continue;
         }
@@ -78,7 +84,7 @@ fn defense(position: &mut Position, depth: i32) -> (bool, Move) {
         let (repetition, _) = position.is_repetition();
         if repetition {
             position.undo_move();
-            continue;
+            return (false, NULL_MOVE);
         }
 
         let (checkmate, _) = attack(position, depth - 1);

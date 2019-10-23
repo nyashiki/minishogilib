@@ -280,6 +280,10 @@ impl Position {
         return self.side_to_move as u8;
     }
 
+    pub fn get_ply(&self) -> u16 {
+        return self.ply;
+    }
+
     pub fn generate_moves(&self) -> std::vec::Vec<Move> {
         return self.generate_moves_with_option(true, true, false);
     }
@@ -1779,7 +1783,7 @@ fn sfen_to_move_test() {
             }
 
             for m in &moves {
-                let sfen_move = position.sfen_to_move(m.sfen());
+                let sfen_move = position.sfen_to_move(&m.sfen());
                 assert_eq!(sfen_move, *m);
             }
 
