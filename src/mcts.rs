@@ -5,6 +5,7 @@ use types::*;
 use numpy::PyArray1;
 use pyo3::prelude::*;
 use rand::distributions::Distribution;
+use rand::Rng;
 
 #[derive(Clone)]
 pub struct Node {
@@ -159,6 +160,36 @@ impl MCTS {
         let best_child: usize = self.select_n_max_child(node);
 
         return self.game_tree[best_child].m;
+    }
+
+    pub fn softmax_sample(&self, node: usize, temperature: f32) -> Move {
+        let mut visit_max: i32 = 0;
+
+        for child in &self.game_tree[node].children {
+            if self.game_tree[*child].n as i32 > visit_max {
+                visit_max = self.game_tree[*child].n as i32;
+            }
+        }
+
+        let mut sum: f32 = 0.0;
+
+        for child in &self.game_tree[node].children {
+            sum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp();
+        }
+
+        let mut rng = rand::thread_rng();
+        let r: f32 = rng.gen();
+
+        let mut cum: f32 = 0.0;
+
+        for child in &self.game_tree[node].children {
+            cum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp() / sum;
+            if r < cum {
+                return self.game_tree[*child].m;
+            }
+        }
+
+        return self.game_tree[self.game_tree[node].children[0]].m;
     }
 
     pub fn print(&self, root: usize) {
