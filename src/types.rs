@@ -6,7 +6,7 @@ impl Color {
     pub const BLACK: Color = Color(1);
     pub const NO_COLOR: Color = Color(2);
 
-    pub fn get_op_color(self) -> Color {
+    pub const fn get_op_color(self) -> Color {
         Color(self.0 ^ 1)
     }
 
@@ -53,11 +53,11 @@ impl Piece {
         self.0 as usize
     }
 
-    pub fn get_promoted(self) -> Piece {
+    pub const fn get_promoted(self) -> Piece {
         Piece(self.0 | 0b01000)
     }
 
-    pub fn is_promoted(self) -> bool {
+    pub const fn is_promoted(self) -> bool {
         (self.0 & 0b01000) != 0
     }
 
@@ -65,11 +65,11 @@ impl Piece {
         self.get_piece_type().is_promotable()
     }
 
-    pub fn get_raw(self) -> Piece {
+    pub const fn get_raw(self) -> Piece {
         Piece(self.0 & 0b10111)
     }
 
-    pub fn is_raw(self) -> bool {
+    pub const fn is_raw(self) -> bool {
         (self.0 & 0b01000) == 0
     }
 
@@ -81,7 +81,7 @@ impl Piece {
         }
     }
 
-    pub fn get_piece_type(self) -> PieceType {
+    pub const fn get_piece_type(self) -> PieceType {
         PieceType(self.0 & 0b01111)
     }
 
@@ -235,11 +235,11 @@ impl PieceType {
         self.0 as usize
     }
 
-    pub fn get_promoted(self) -> PieceType {
+    pub const fn get_promoted(self) -> PieceType {
         PieceType(self.0 | 0b1000)
     }
 
-    pub fn is_promoted(self) -> bool {
+    pub const fn is_promoted(self) -> bool {
         (self.0 & 0b1000) != 0
     }
 
@@ -247,11 +247,11 @@ impl PieceType {
         self.0 > PieceType::GOLD.as_usize() as u8 && self.0 <= PieceType::PAWN.as_usize() as u8
     }
 
-    pub fn get_raw(self) -> PieceType {
+    pub const fn get_raw(self) -> PieceType {
         PieceType(self.0 & 0b0111)
     }
 
-    pub fn is_raw(self) -> bool {
+    pub const fn is_raw(self) -> bool {
         self.0 & 0b1000 == 0
     }
 
