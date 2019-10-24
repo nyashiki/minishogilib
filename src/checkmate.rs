@@ -81,9 +81,18 @@ fn defense(position: &mut Position, depth: i32) -> (bool, Move) {
     for m in &moves {
         position.do_move(m);
 
-        let (repetition, _) = position.is_repetition();
+        let (repetition, check_repetition) = position.is_repetition();
         if repetition {
-            position.undo_move();
+            if check_repetition {
+                position.undo_move();
+                continue;
+            }
+
+            if position.side_to_move == Color::Black {
+                position.undo_move();
+                continue;
+            }
+
             return (false, NULL_MOVE);
         }
 
