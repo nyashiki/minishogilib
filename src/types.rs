@@ -1,25 +1,24 @@
 #[derive(Copy, Clone, Debug, PartialEq)]
-#[repr(u8)]
-pub enum Color {
-    White = 0,
-    Black = 1,
-    NoColor,
-}
+pub struct Color(u8);
 
 impl Color {
+    pub const WHITE: Color = Color(0);
+    pub const BLACK: Color = Color(1);
+    pub const NO_COLOR: Color = Color(2);
+
     pub fn get_op_color(self) -> Color {
-        if self == Color::White {
-            Color::Black
-        } else {
-            Color::White
-        }
+        Color(self.0 ^ 1)
+    }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
     }
 }
 
 #[test]
 fn get_op_color_test() {
-    assert!(Color::White.get_op_color() == Color::Black);
-    assert!(Color::Black.get_op_color() == Color::White);
+    assert!(Color::WHITE.get_op_color() == Color::BLACK);
+    assert!(Color::BLACK.get_op_color() == Color::WHITE);
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -107,29 +106,29 @@ impl Piece {
 
     pub fn get_color(self) -> Color {
         match self {
-            Piece::NoPiece => Color::NoColor,
+            Piece::NoPiece => Color::NO_COLOR,
 
-            Piece::WKing => Color::White,
-            Piece::WGold => Color::White,
-            Piece::WSilver => Color::White,
-            Piece::WBishop => Color::White,
-            Piece::WRook => Color::White,
-            Piece::WPawn => Color::White,
-            Piece::WSilverX => Color::White,
-            Piece::WBishopX => Color::White,
-            Piece::WRookX => Color::White,
-            Piece::WPawnX => Color::White,
+            Piece::WKing => Color::WHITE,
+            Piece::WGold => Color::WHITE,
+            Piece::WSilver => Color::WHITE,
+            Piece::WBishop => Color::WHITE,
+            Piece::WRook => Color::WHITE,
+            Piece::WPawn => Color::WHITE,
+            Piece::WSilverX => Color::WHITE,
+            Piece::WBishopX => Color::WHITE,
+            Piece::WRookX => Color::WHITE,
+            Piece::WPawnX => Color::WHITE,
 
-            Piece::BKing => Color::Black,
-            Piece::BGold => Color::Black,
-            Piece::BSilver => Color::Black,
-            Piece::BBishop => Color::Black,
-            Piece::BRook => Color::Black,
-            Piece::BPawn => Color::Black,
-            Piece::BSilverX => Color::Black,
-            Piece::BBishopX => Color::Black,
-            Piece::BRookX => Color::Black,
-            Piece::BPawnX => Color::Black,
+            Piece::BKing => Color::BLACK,
+            Piece::BGold => Color::BLACK,
+            Piece::BSilver => Color::BLACK,
+            Piece::BBishop => Color::BLACK,
+            Piece::BRook => Color::BLACK,
+            Piece::BPawn => Color::BLACK,
+            Piece::BSilverX => Color::BLACK,
+            Piece::BBishopX => Color::BLACK,
+            Piece::BRookX => Color::BLACK,
+            Piece::BPawnX => Color::BLACK,
         }
     }
 
@@ -369,7 +368,7 @@ impl PieceType {
     }
 
     pub fn get_piece(self, color: Color) -> Piece {
-        if color == Color::White {
+        if color == Color::WHITE {
             match self {
                 PieceType::King => Piece::WKing,
                 PieceType::Gold => Piece::WGold,
@@ -502,31 +501,31 @@ fn is_raw_test() {
 
 #[test]
 fn get_piece_test() {
-    assert!(PieceType::NoPieceType.get_piece(Color::White) == Piece::NoPiece);
+    assert!(PieceType::NoPieceType.get_piece(Color::WHITE) == Piece::NoPiece);
 
     // White
-    assert!(PieceType::King.get_piece(Color::White) == Piece::WKing);
-    assert!(PieceType::Gold.get_piece(Color::White) == Piece::WGold);
-    assert!(PieceType::Silver.get_piece(Color::White) == Piece::WSilver);
-    assert!(PieceType::Bishop.get_piece(Color::White) == Piece::WBishop);
-    assert!(PieceType::Rook.get_piece(Color::White) == Piece::WRook);
-    assert!(PieceType::Pawn.get_piece(Color::White) == Piece::WPawn);
-    assert!(PieceType::SilverX.get_piece(Color::White) == Piece::WSilverX);
-    assert!(PieceType::BishopX.get_piece(Color::White) == Piece::WBishopX);
-    assert!(PieceType::RookX.get_piece(Color::White) == Piece::WRookX);
-    assert!(PieceType::PawnX.get_piece(Color::White) == Piece::WPawnX);
+    assert!(PieceType::King.get_piece(Color::WHITE) == Piece::WKing);
+    assert!(PieceType::Gold.get_piece(Color::WHITE) == Piece::WGold);
+    assert!(PieceType::Silver.get_piece(Color::WHITE) == Piece::WSilver);
+    assert!(PieceType::Bishop.get_piece(Color::WHITE) == Piece::WBishop);
+    assert!(PieceType::Rook.get_piece(Color::WHITE) == Piece::WRook);
+    assert!(PieceType::Pawn.get_piece(Color::WHITE) == Piece::WPawn);
+    assert!(PieceType::SilverX.get_piece(Color::WHITE) == Piece::WSilverX);
+    assert!(PieceType::BishopX.get_piece(Color::WHITE) == Piece::WBishopX);
+    assert!(PieceType::RookX.get_piece(Color::WHITE) == Piece::WRookX);
+    assert!(PieceType::PawnX.get_piece(Color::WHITE) == Piece::WPawnX);
 
     // Black
-    assert!(PieceType::King.get_piece(Color::Black) == Piece::BKing);
-    assert!(PieceType::Gold.get_piece(Color::Black) == Piece::BGold);
-    assert!(PieceType::Silver.get_piece(Color::Black) == Piece::BSilver);
-    assert!(PieceType::Bishop.get_piece(Color::Black) == Piece::BBishop);
-    assert!(PieceType::Rook.get_piece(Color::Black) == Piece::BRook);
-    assert!(PieceType::Pawn.get_piece(Color::Black) == Piece::BPawn);
-    assert!(PieceType::SilverX.get_piece(Color::Black) == Piece::BSilverX);
-    assert!(PieceType::BishopX.get_piece(Color::Black) == Piece::BBishopX);
-    assert!(PieceType::RookX.get_piece(Color::Black) == Piece::BRookX);
-    assert!(PieceType::PawnX.get_piece(Color::Black) == Piece::BPawnX);
+    assert!(PieceType::King.get_piece(Color::BLACK) == Piece::BKing);
+    assert!(PieceType::Gold.get_piece(Color::BLACK) == Piece::BGold);
+    assert!(PieceType::Silver.get_piece(Color::BLACK) == Piece::BSilver);
+    assert!(PieceType::Bishop.get_piece(Color::BLACK) == Piece::BBishop);
+    assert!(PieceType::Rook.get_piece(Color::BLACK) == Piece::BRook);
+    assert!(PieceType::Pawn.get_piece(Color::BLACK) == Piece::BPawn);
+    assert!(PieceType::SilverX.get_piece(Color::BLACK) == Piece::BSilverX);
+    assert!(PieceType::BishopX.get_piece(Color::BLACK) == Piece::BBishopX);
+    assert!(PieceType::RookX.get_piece(Color::BLACK) == Piece::BRookX);
+    assert!(PieceType::PawnX.get_piece(Color::BLACK) == Piece::BPawnX);
 }
 
 #[test]
@@ -560,29 +559,29 @@ fn get_op_piece_test() {
 
 #[test]
 fn get_color_test() {
-    assert!(Piece::NoPiece.get_color() == Color::NoColor);
+    assert!(Piece::NoPiece.get_color() == Color::NO_COLOR);
 
-    assert!(Piece::WKing.get_color() == Color::White);
-    assert!(Piece::WGold.get_color() == Color::White);
-    assert!(Piece::WSilver.get_color() == Color::White);
-    assert!(Piece::WBishop.get_color() == Color::White);
-    assert!(Piece::WRook.get_color() == Color::White);
-    assert!(Piece::WPawn.get_color() == Color::White);
-    assert!(Piece::WSilverX.get_color() == Color::White);
-    assert!(Piece::WBishopX.get_color() == Color::White);
-    assert!(Piece::WRookX.get_color() == Color::White);
-    assert!(Piece::WPawnX.get_color() == Color::White);
+    assert!(Piece::WKing.get_color() == Color::WHITE);
+    assert!(Piece::WGold.get_color() == Color::WHITE);
+    assert!(Piece::WSilver.get_color() == Color::WHITE);
+    assert!(Piece::WBishop.get_color() == Color::WHITE);
+    assert!(Piece::WRook.get_color() == Color::WHITE);
+    assert!(Piece::WPawn.get_color() == Color::WHITE);
+    assert!(Piece::WSilverX.get_color() == Color::WHITE);
+    assert!(Piece::WBishopX.get_color() == Color::WHITE);
+    assert!(Piece::WRookX.get_color() == Color::WHITE);
+    assert!(Piece::WPawnX.get_color() == Color::WHITE);
 
-    assert!(Piece::BKing.get_color() == Color::Black);
-    assert!(Piece::BGold.get_color() == Color::Black);
-    assert!(Piece::BSilver.get_color() == Color::Black);
-    assert!(Piece::BBishop.get_color() == Color::Black);
-    assert!(Piece::BRook.get_color() == Color::Black);
-    assert!(Piece::BPawn.get_color() == Color::Black);
-    assert!(Piece::BSilverX.get_color() == Color::Black);
-    assert!(Piece::BBishopX.get_color() == Color::Black);
-    assert!(Piece::BRookX.get_color() == Color::Black);
-    assert!(Piece::BPawnX.get_color() == Color::Black);
+    assert!(Piece::BKing.get_color() == Color::BLACK);
+    assert!(Piece::BGold.get_color() == Color::BLACK);
+    assert!(Piece::BSilver.get_color() == Color::BLACK);
+    assert!(Piece::BBishop.get_color() == Color::BLACK);
+    assert!(Piece::BRook.get_color() == Color::BLACK);
+    assert!(Piece::BPawn.get_color() == Color::BLACK);
+    assert!(Piece::BSilverX.get_color() == Color::BLACK);
+    assert!(Piece::BBishopX.get_color() == Color::BLACK);
+    assert!(Piece::BRookX.get_color() == Color::BLACK);
+    assert!(Piece::BPawnX.get_color() == Color::BLACK);
 }
 
 #[test]

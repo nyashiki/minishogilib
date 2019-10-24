@@ -286,7 +286,7 @@ impl MCTS {
             if is_check_repetition {
                 value = 1.0;
             } else if is_repetition {
-                value = if position.side_to_move == Color::White { 0.0 } else { 1.0 }
+                value = if position.side_to_move == Color::WHITE { 0.0 } else { 1.0 }
             } else if position.ply == MAX_PLY as u16 {
                 value = 0.5;
             } else {
