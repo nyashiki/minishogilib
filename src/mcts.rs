@@ -291,7 +291,7 @@ impl MCTS {
                 value = 0.5;
             } else {
                 value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
-                    == PieceType::Pawn
+                    == PieceType::PAWN
                 {
                     // 打ち歩詰め
                     1.0

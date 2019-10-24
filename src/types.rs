@@ -10,7 +10,7 @@ impl Color {
         Color(self.0 ^ 1)
     }
 
-    pub fn as_usize(self) -> usize {
+    pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
 }
@@ -22,175 +22,80 @@ fn get_op_color_test() {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[repr(u8)]
-pub enum Piece {
-    NoPiece = 0,
-
-    WKing = 0b00001,
-    WGold = 0b00010,
-    WSilver = 0b00011,
-    WBishop = 0b00100,
-    WRook = 0b00101,
-    WPawn = 0b00110,
-    WSilverX = 0b01011,
-    WBishopX = 0b01100,
-    WRookX = 0b01101,
-    WPawnX = 0b01110,
-
-    BKing = 0b10001,
-    BGold = 0b10010,
-    BSilver = 0b10011,
-    BBishop = 0b10100,
-    BRook = 0b10101,
-    BPawn = 0b10110,
-    BSilverX = 0b11011,
-    BBishopX = 0b11100,
-    BRookX = 0b11101,
-    BPawnX = 0b11110,
-}
+pub struct Piece(u8);
 
 impl Piece {
+    pub const NO_PIECE: Piece = Piece(0);
+
+    pub const W_KING: Piece = Piece(0b00001);
+    pub const W_GOLD: Piece = Piece(0b00010);
+    pub const W_SILVER: Piece = Piece(0b00011);
+    pub const W_BISHOP: Piece = Piece(0b00100);
+    pub const W_ROOK: Piece = Piece(0b00101);
+    pub const W_PAWN: Piece = Piece(0b00110);
+    pub const W_SILVER_X: Piece = Piece(0b01011);
+    pub const W_BISHOP_X: Piece = Piece(0b01100);
+    pub const W_ROOK_X: Piece = Piece(0b01101);
+    pub const W_PAWN_X: Piece = Piece(0b01110);
+
+    pub const B_KING: Piece = Piece(0b10001);
+    pub const B_GOLD: Piece = Piece(0b10010);
+    pub const B_SILVER: Piece = Piece(0b10011);
+    pub const B_BISHOP: Piece = Piece(0b10100);
+    pub const B_ROOK: Piece = Piece(0b10101);
+    pub const B_PAWN: Piece = Piece(0b10110);
+    pub const B_SILVER_X: Piece = Piece(0b11011);
+    pub const B_BISHOP_X: Piece = Piece(0b11100);
+    pub const B_ROOK_X: Piece = Piece(0b11101);
+    pub const B_PAWN_X: Piece = Piece(0b11110);
+
+    pub const fn as_usize(self) -> usize {
+        self.0 as usize
+    }
+
     pub fn get_promoted(self) -> Piece {
-        match self {
-            Piece::WSilver => Piece::WSilverX,
-            Piece::WBishop => Piece::WBishopX,
-            Piece::WRook => Piece::WRookX,
-            Piece::WPawn => Piece::WPawnX,
-            Piece::BSilver => Piece::BSilverX,
-            Piece::BBishop => Piece::BBishopX,
-            Piece::BRook => Piece::BRookX,
-            Piece::BPawn => Piece::BPawnX,
-            _ => Piece::NoPiece,
-        }
+        Piece(self.0 | 0b01000)
     }
 
     pub fn is_promoted(self) -> bool {
-        match self {
-            Piece::WSilverX => true,
-            Piece::WBishopX => true,
-            Piece::WRookX => true,
-            Piece::WPawnX => true,
-            Piece::BSilverX => true,
-            Piece::BBishopX => true,
-            Piece::BRookX => true,
-            Piece::BPawnX => true,
-            _ => false,
-        }
+        (self.0 & 0b01000) != 0
     }
 
     pub fn is_promotable(self) -> bool {
-        return self.get_promoted() != Piece::NoPiece;
+        self.get_piece_type().is_promotable()
     }
 
     pub fn get_raw(self) -> Piece {
-        if !self.is_promoted() {
-            return self;
-        }
-
-        match self {
-            Piece::WSilverX => Piece::WSilver,
-            Piece::WBishopX => Piece::WBishop,
-            Piece::WRookX => Piece::WRook,
-            Piece::WPawnX => Piece::WPawn,
-            Piece::BSilverX => Piece::BSilver,
-            Piece::BBishopX => Piece::BBishop,
-            Piece::BRookX => Piece::BRook,
-            Piece::BPawnX => Piece::BPawn,
-            _ => Piece::NoPiece,
-        }
+        Piece(self.0 & 0b10111)
     }
 
     pub fn is_raw(self) -> bool {
-        !self.is_promoted()
+        (self.0 & 0b01000) == 0
     }
 
     pub fn get_color(self) -> Color {
-        match self {
-            Piece::NoPiece => Color::NO_COLOR,
-
-            Piece::WKing => Color::WHITE,
-            Piece::WGold => Color::WHITE,
-            Piece::WSilver => Color::WHITE,
-            Piece::WBishop => Color::WHITE,
-            Piece::WRook => Color::WHITE,
-            Piece::WPawn => Color::WHITE,
-            Piece::WSilverX => Color::WHITE,
-            Piece::WBishopX => Color::WHITE,
-            Piece::WRookX => Color::WHITE,
-            Piece::WPawnX => Color::WHITE,
-
-            Piece::BKing => Color::BLACK,
-            Piece::BGold => Color::BLACK,
-            Piece::BSilver => Color::BLACK,
-            Piece::BBishop => Color::BLACK,
-            Piece::BRook => Color::BLACK,
-            Piece::BPawn => Color::BLACK,
-            Piece::BSilverX => Color::BLACK,
-            Piece::BBishopX => Color::BLACK,
-            Piece::BRookX => Color::BLACK,
-            Piece::BPawnX => Color::BLACK,
+        if self == Piece::NO_PIECE {
+            Color::NO_COLOR
+        } else {
+            Color(self.0 >> 4)
         }
     }
 
     pub fn get_piece_type(self) -> PieceType {
-        match self {
-            Piece::NoPiece => PieceType::NoPieceType,
-
-            Piece::WKing => PieceType::King,
-            Piece::WGold => PieceType::Gold,
-            Piece::WSilver => PieceType::Silver,
-            Piece::WBishop => PieceType::Bishop,
-            Piece::WRook => PieceType::Rook,
-            Piece::WPawn => PieceType::Pawn,
-            Piece::WSilverX => PieceType::SilverX,
-            Piece::WBishopX => PieceType::BishopX,
-            Piece::WRookX => PieceType::RookX,
-            Piece::WPawnX => PieceType::PawnX,
-
-            Piece::BKing => PieceType::King,
-            Piece::BGold => PieceType::Gold,
-            Piece::BSilver => PieceType::Silver,
-            Piece::BBishop => PieceType::Bishop,
-            Piece::BRook => PieceType::Rook,
-            Piece::BPawn => PieceType::Pawn,
-            Piece::BSilverX => PieceType::SilverX,
-            Piece::BBishopX => PieceType::BishopX,
-            Piece::BRookX => PieceType::RookX,
-            Piece::BPawnX => PieceType::PawnX,
-        }
+        PieceType(self.0 & 0b01111)
     }
 
     pub fn get_op_piece(self) -> Piece {
-        match self {
-            Piece::NoPiece => Piece::NoPiece,
-
-            Piece::WKing => Piece::BKing,
-            Piece::WGold => Piece::BGold,
-            Piece::WSilver => Piece::BSilver,
-            Piece::WBishop => Piece::BBishop,
-            Piece::WRook => Piece::BRook,
-            Piece::WPawn => Piece::BPawn,
-            Piece::WSilverX => Piece::BSilverX,
-            Piece::WBishopX => Piece::BBishopX,
-            Piece::WRookX => Piece::BRookX,
-            Piece::WPawnX => Piece::BPawnX,
-
-            Piece::BKing => Piece::WKing,
-            Piece::BGold => Piece::WGold,
-            Piece::BSilver => Piece::WSilver,
-            Piece::BBishop => Piece::WBishop,
-            Piece::BRook => Piece::WRook,
-            Piece::BPawn => Piece::WPawn,
-            Piece::BSilverX => Piece::WSilverX,
-            Piece::BBishopX => Piece::WBishopX,
-            Piece::BRookX => Piece::WRookX,
-            Piece::BPawnX => Piece::WPawnX,
+        if self == Piece::NO_PIECE {
+            Piece::NO_PIECE
+        } else {
+            Piece(self.0 ^ 0b10000)
         }
     }
 
     pub fn get_move_dirs(self) -> std::vec::Vec<Direction> {
         match self {
-            Piece::WKing => vec![
+            Piece::W_KING => vec![
                 Direction::N,
                 Direction::NE,
                 Direction::E,
@@ -200,7 +105,7 @@ impl Piece {
                 Direction::W,
                 Direction::NW,
             ],
-            Piece::WGold => vec![
+            Piece::W_GOLD => vec![
                 Direction::N,
                 Direction::NE,
                 Direction::E,
@@ -208,11 +113,11 @@ impl Piece {
                 Direction::W,
                 Direction::NW,
             ],
-            Piece::WSilver => {
+            Piece::W_SILVER => {
                 vec![Direction::N, Direction::NE, Direction::SE, Direction::SW, Direction::NW]
             }
-            Piece::WPawn => vec![Direction::N],
-            Piece::WSilverX => vec![
+            Piece::W_PAWN => vec![Direction::N],
+            Piece::W_SILVER_X => vec![
                 Direction::N,
                 Direction::NE,
                 Direction::E,
@@ -220,9 +125,9 @@ impl Piece {
                 Direction::W,
                 Direction::NW,
             ],
-            Piece::WBishopX => vec![Direction::N, Direction::E, Direction::S, Direction::W],
-            Piece::WRookX => vec![Direction::NE, Direction::SE, Direction::SW, Direction::NW],
-            Piece::WPawnX => vec![
+            Piece::W_BISHOP_X => vec![Direction::N, Direction::E, Direction::S, Direction::W],
+            Piece::W_ROOK_X => vec![Direction::NE, Direction::SE, Direction::SW, Direction::NW],
+            Piece::W_PAWN_X => vec![
                 Direction::N,
                 Direction::NE,
                 Direction::E,
@@ -231,7 +136,7 @@ impl Piece {
                 Direction::NW,
             ],
 
-            Piece::BKing => vec![
+            Piece::B_KING => vec![
                 Direction::N,
                 Direction::NE,
                 Direction::E,
@@ -241,7 +146,7 @@ impl Piece {
                 Direction::W,
                 Direction::NW,
             ],
-            Piece::BGold => vec![
+            Piece::B_GOLD => vec![
                 Direction::N,
                 Direction::E,
                 Direction::SE,
@@ -249,11 +154,11 @@ impl Piece {
                 Direction::SW,
                 Direction::W,
             ],
-            Piece::BSilver => {
+            Piece::B_SILVER => {
                 vec![Direction::NE, Direction::SE, Direction::S, Direction::SW, Direction::NW]
             }
-            Piece::BPawn => vec![Direction::S],
-            Piece::BSilverX => vec![
+            Piece::B_PAWN => vec![Direction::S],
+            Piece::B_SILVER_X => vec![
                 Direction::N,
                 Direction::E,
                 Direction::SE,
@@ -261,9 +166,9 @@ impl Piece {
                 Direction::SW,
                 Direction::W,
             ],
-            Piece::BBishopX => vec![Direction::N, Direction::E, Direction::S, Direction::W],
-            Piece::BRookX => vec![Direction::NE, Direction::SE, Direction::SW, Direction::NW],
-            Piece::BPawnX => vec![
+            Piece::B_BISHOP_X => vec![Direction::N, Direction::E, Direction::S, Direction::W],
+            Piece::B_ROOK_X => vec![Direction::NE, Direction::SE, Direction::SW, Direction::NW],
+            Piece::B_PAWN_X => vec![
                 Direction::N,
                 Direction::E,
                 Direction::SE,
@@ -279,122 +184,85 @@ impl Piece {
 
 impl std::fmt::Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Piece::NoPiece => write!(f, " * "),
+        match *self {
+            Piece::NO_PIECE => write!(f, " * "),
 
-            Piece::WKing => write!(f, "\x1b[38;2;0;100;200m K \x1b[0m"),
-            Piece::WGold => write!(f, "\x1b[38;2;0;100;200m G \x1b[0m"),
-            Piece::WSilver => write!(f, "\x1b[38;2;0;100;200m S \x1b[0m"),
-            Piece::WBishop => write!(f, "\x1b[38;2;0;100;200m B \x1b[0m"),
-            Piece::WRook => write!(f, "\x1b[38;2;0;100;200m R \x1b[0m"),
-            Piece::WPawn => write!(f, "\x1b[38;2;0;100;200m P \x1b[0m"),
-            Piece::WSilverX => write!(f, "\x1b[38;2;0;100;200m Sx\x1b[0m"),
-            Piece::WBishopX => write!(f, "\x1b[38;2;0;100;200m Bx\x1b[0m"),
-            Piece::WRookX => write!(f, "\x1b[38;2;0;100;200m Rx\x1b[0m"),
-            Piece::WPawnX => write!(f, "\x1b[38;2;0;100;200m Px\x1b[0m"),
+            Piece::W_KING => write!(f, "\x1b[38;2;0;100;200m K \x1b[0m"),
+            Piece::W_GOLD => write!(f, "\x1b[38;2;0;100;200m G \x1b[0m"),
+            Piece::W_SILVER => write!(f, "\x1b[38;2;0;100;200m S \x1b[0m"),
+            Piece::W_BISHOP => write!(f, "\x1b[38;2;0;100;200m B \x1b[0m"),
+            Piece::W_ROOK => write!(f, "\x1b[38;2;0;100;200m R \x1b[0m"),
+            Piece::W_PAWN => write!(f, "\x1b[38;2;0;100;200m P \x1b[0m"),
+            Piece::W_SILVER_X => write!(f, "\x1b[38;2;0;100;200m Sx\x1b[0m"),
+            Piece::W_BISHOP_X => write!(f, "\x1b[38;2;0;100;200m Bx\x1b[0m"),
+            Piece::W_ROOK_X => write!(f, "\x1b[38;2;0;100;200m Rx\x1b[0m"),
+            Piece::W_PAWN_X => write!(f, "\x1b[38;2;0;100;200m Px\x1b[0m"),
 
-            Piece::BKing => write!(f, "\x1b[38;2;250;200;50mvK \x1b[0m"),
-            Piece::BGold => write!(f, "\x1b[38;2;250;200;50mvG \x1b[0m"),
-            Piece::BSilver => write!(f, "\x1b[38;2;250;200;50mvS \x1b[0m"),
-            Piece::BBishop => write!(f, "\x1b[38;2;250;200;50mvB \x1b[0m"),
-            Piece::BRook => write!(f, "\x1b[38;2;250;200;50mvR \x1b[0m"),
-            Piece::BPawn => write!(f, "\x1b[38;2;250;200;50mvP \x1b[0m"),
-            Piece::BSilverX => write!(f, "\x1b[38;2;250;200;50mvSx\x1b[0m"),
-            Piece::BBishopX => write!(f, "\x1b[38;2;250;200;50mvBx\x1b[0m"),
-            Piece::BRookX => write!(f, "\x1b[38;2;250;200;50mvRx\x1b[0m"),
-            Piece::BPawnX => write!(f, "\x1b[38;2;250;200;50mvPx\x1b[0m"),
+            Piece::B_KING => write!(f, "\x1b[38;2;250;200;50mvK \x1b[0m"),
+            Piece::B_GOLD => write!(f, "\x1b[38;2;250;200;50mvG \x1b[0m"),
+            Piece::B_SILVER => write!(f, "\x1b[38;2;250;200;50mvS \x1b[0m"),
+            Piece::B_BISHOP => write!(f, "\x1b[38;2;250;200;50mvB \x1b[0m"),
+            Piece::B_ROOK => write!(f, "\x1b[38;2;250;200;50mvR \x1b[0m"),
+            Piece::B_PAWN => write!(f, "\x1b[38;2;250;200;50mvP \x1b[0m"),
+            Piece::B_SILVER_X => write!(f, "\x1b[38;2;250;200;50mvSx\x1b[0m"),
+            Piece::B_BISHOP_X => write!(f, "\x1b[38;2;250;200;50mvBx\x1b[0m"),
+            Piece::B_ROOK_X => write!(f, "\x1b[38;2;250;200;50mvRx\x1b[0m"),
+            Piece::B_PAWN_X => write!(f, "\x1b[38;2;250;200;50mvPx\x1b[0m"),
+
+            _ => write!(f, "ERROR"),
         }
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
-#[repr(u8)]
-pub enum PieceType {
-    NoPieceType = 0,
-
-    King = 0b0001,
-    Gold = 0b0010,
-    Silver = 0b0011,
-    Bishop = 0b0100,
-    Rook = 0b0101,
-    Pawn = 0b0110,
-    SilverX = 0b1011,
-    BishopX = 0b1100,
-    RookX = 0b1101,
-    PawnX = 0b1110,
-}
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct PieceType(u8);
 
 impl PieceType {
+    pub const NO_PIECE_TYPE: PieceType = PieceType(0);
+
+    pub const KING: PieceType = PieceType(0b0001);
+    pub const GOLD: PieceType = PieceType(0b0010);
+    pub const SILVER: PieceType = PieceType(0b0011);
+    pub const BISHOP: PieceType = PieceType(0b0100);
+    pub const ROOK: PieceType = PieceType(0b0101);
+    pub const PAWN: PieceType = PieceType(0b0110);
+    pub const SILVER_X: PieceType = PieceType(0b1011);
+    pub const BISHOP_X: PieceType = PieceType(0b1100);
+    pub const ROOK_X: PieceType = PieceType(0b1101);
+    pub const PAWN_X: PieceType = PieceType(0b1110);
+
+    pub const fn as_usize(self) -> usize {
+        self.0 as usize
+    }
+
     pub fn get_promoted(self) -> PieceType {
-        match self {
-            PieceType::Silver => PieceType::SilverX,
-            PieceType::Bishop => PieceType::BishopX,
-            PieceType::Rook => PieceType::RookX,
-            PieceType::Pawn => PieceType::PawnX,
-            _ => PieceType::NoPieceType,
-        }
+        PieceType(self.0 | 0b1000)
     }
 
     pub fn is_promoted(self) -> bool {
-        match self {
-            PieceType::SilverX => true,
-            PieceType::BishopX => true,
-            PieceType::RookX => true,
-            PieceType::PawnX => true,
-            _ => false,
-        }
+        (self.0 & 0b1000) != 0
     }
 
     pub fn is_promotable(self) -> bool {
-        return self.get_promoted() != PieceType::NoPieceType;
+        self.0 > PieceType::GOLD.as_usize() as u8 && self.0 <= PieceType::PAWN.as_usize() as u8
     }
 
     pub fn get_raw(self) -> PieceType {
-        if !self.is_promoted() {
-            return self;
-        }
-
-        match self {
-            PieceType::SilverX => PieceType::Silver,
-            PieceType::BishopX => PieceType::Bishop,
-            PieceType::RookX => PieceType::Rook,
-            PieceType::PawnX => PieceType::Pawn,
-            _ => PieceType::NoPieceType,
-        }
+        PieceType(self.0 & 0b0111)
     }
 
     pub fn is_raw(self) -> bool {
-        !self.is_promoted()
+        self.0 & 0b1000 == 0
     }
 
     pub fn get_piece(self, color: Color) -> Piece {
-        if color == Color::WHITE {
-            match self {
-                PieceType::King => Piece::WKing,
-                PieceType::Gold => Piece::WGold,
-                PieceType::Silver => Piece::WSilver,
-                PieceType::Bishop => Piece::WBishop,
-                PieceType::Rook => Piece::WRook,
-                PieceType::Pawn => Piece::WPawn,
-                PieceType::SilverX => Piece::WSilverX,
-                PieceType::BishopX => Piece::WBishopX,
-                PieceType::RookX => Piece::WRookX,
-                PieceType::PawnX => Piece::WPawnX,
-                _ => Piece::NoPiece,
-            }
+        if self == PieceType::NO_PIECE_TYPE {
+            Piece::NO_PIECE
         } else {
-            match self {
-                PieceType::King => Piece::BKing,
-                PieceType::Gold => Piece::BGold,
-                PieceType::Silver => Piece::BSilver,
-                PieceType::Bishop => Piece::BBishop,
-                PieceType::Rook => Piece::BRook,
-                PieceType::Pawn => Piece::BPawn,
-                PieceType::SilverX => Piece::BSilverX,
-                PieceType::BishopX => Piece::BBishopX,
-                PieceType::RookX => Piece::BRookX,
-                PieceType::PawnX => Piece::BPawnX,
-                _ => Piece::NoPiece,
+            if color == Color::WHITE {
+                Piece(self.0)
+            } else {
+                Piece(self.0 | 0b10000)
             }
         }
     }
@@ -403,212 +271,212 @@ impl PieceType {
 #[test]
 fn get_promoted_test() {
     // Piece
-    assert!(Piece::WSilver.get_promoted() == Piece::WSilverX);
-    assert!(Piece::WBishop.get_promoted() == Piece::WBishopX);
-    assert!(Piece::WRook.get_promoted() == Piece::WRookX);
-    assert!(Piece::WPawn.get_promoted() == Piece::WPawnX);
-    assert!(Piece::BSilver.get_promoted() == Piece::BSilverX);
-    assert!(Piece::BBishop.get_promoted() == Piece::BBishopX);
-    assert!(Piece::BRook.get_promoted() == Piece::BRookX);
-    assert!(Piece::BPawn.get_promoted() == Piece::BPawnX);
+    assert!(Piece::W_SILVER.get_promoted() == Piece::W_SILVER_X);
+    assert!(Piece::W_BISHOP.get_promoted() == Piece::W_BISHOP_X);
+    assert!(Piece::W_ROOK.get_promoted() == Piece::W_ROOK_X);
+    assert!(Piece::W_PAWN.get_promoted() == Piece::W_PAWN_X);
+    assert!(Piece::B_SILVER.get_promoted() == Piece::B_SILVER_X);
+    assert!(Piece::B_BISHOP.get_promoted() == Piece::B_BISHOP_X);
+    assert!(Piece::B_ROOK.get_promoted() == Piece::B_ROOK_X);
+    assert!(Piece::B_PAWN.get_promoted() == Piece::B_PAWN_X);
 
     // PieceType
-    assert!(PieceType::Silver.get_promoted() == PieceType::SilverX);
-    assert!(PieceType::Bishop.get_promoted() == PieceType::BishopX);
-    assert!(PieceType::Rook.get_promoted() == PieceType::RookX);
-    assert!(PieceType::Pawn.get_promoted() == PieceType::PawnX);
+    assert!(PieceType::SILVER.get_promoted() == PieceType::SILVER_X);
+    assert!(PieceType::BISHOP.get_promoted() == PieceType::BISHOP_X);
+    assert!(PieceType::ROOK.get_promoted() == PieceType::ROOK_X);
+    assert!(PieceType::PAWN.get_promoted() == PieceType::PAWN_X);
 }
 
 #[test]
 fn is_promoted_test() {
     // Piece
-    assert!(!Piece::WKing.is_promoted());
-    assert!(!Piece::WGold.is_promoted());
-    assert!(!Piece::WSilver.is_promoted());
-    assert!(!Piece::WBishop.is_promoted());
-    assert!(!Piece::WRook.is_promoted());
-    assert!(!Piece::WPawn.is_promoted());
-    assert!(Piece::WSilverX.is_promoted());
-    assert!(Piece::WBishopX.is_promoted());
-    assert!(Piece::WRookX.is_promoted());
-    assert!(Piece::WPawnX.is_promoted());
-    assert!(!Piece::BKing.is_promoted());
-    assert!(!Piece::BGold.is_promoted());
-    assert!(!Piece::BSilver.is_promoted());
-    assert!(!Piece::BBishop.is_promoted());
-    assert!(!Piece::BRook.is_promoted());
-    assert!(!Piece::BPawn.is_promoted());
-    assert!(Piece::BSilverX.is_promoted());
-    assert!(Piece::BBishopX.is_promoted());
-    assert!(Piece::BRookX.is_promoted());
-    assert!(Piece::BPawnX.is_promoted());
+    assert!(!Piece::W_KING.is_promoted());
+    assert!(!Piece::W_GOLD.is_promoted());
+    assert!(!Piece::W_SILVER.is_promoted());
+    assert!(!Piece::W_BISHOP.is_promoted());
+    assert!(!Piece::W_ROOK.is_promoted());
+    assert!(!Piece::W_PAWN.is_promoted());
+    assert!(Piece::W_SILVER_X.is_promoted());
+    assert!(Piece::W_BISHOP_X.is_promoted());
+    assert!(Piece::W_ROOK_X.is_promoted());
+    assert!(Piece::W_PAWN_X.is_promoted());
+    assert!(!Piece::B_KING.is_promoted());
+    assert!(!Piece::B_GOLD.is_promoted());
+    assert!(!Piece::B_SILVER.is_promoted());
+    assert!(!Piece::B_BISHOP.is_promoted());
+    assert!(!Piece::B_ROOK.is_promoted());
+    assert!(!Piece::B_PAWN.is_promoted());
+    assert!(Piece::B_SILVER_X.is_promoted());
+    assert!(Piece::B_BISHOP_X.is_promoted());
+    assert!(Piece::B_ROOK_X.is_promoted());
+    assert!(Piece::B_PAWN_X.is_promoted());
 
     // PieceType
-    assert!(!PieceType::King.is_promoted());
-    assert!(!PieceType::Gold.is_promoted());
-    assert!(!PieceType::Silver.is_promoted());
-    assert!(!PieceType::Bishop.is_promoted());
-    assert!(!PieceType::Rook.is_promoted());
-    assert!(!PieceType::Pawn.is_promoted());
-    assert!(PieceType::SilverX.is_promoted());
-    assert!(PieceType::BishopX.is_promoted());
-    assert!(PieceType::RookX.is_promoted());
-    assert!(PieceType::PawnX.is_promoted());
+    assert!(!PieceType::KING.is_promoted());
+    assert!(!PieceType::GOLD.is_promoted());
+    assert!(!PieceType::SILVER.is_promoted());
+    assert!(!PieceType::BISHOP.is_promoted());
+    assert!(!PieceType::ROOK.is_promoted());
+    assert!(!PieceType::PAWN.is_promoted());
+    assert!(PieceType::SILVER_X.is_promoted());
+    assert!(PieceType::BISHOP_X.is_promoted());
+    assert!(PieceType::ROOK_X.is_promoted());
+    assert!(PieceType::PAWN_X.is_promoted());
 }
 
 #[test]
 fn get_raw_test() {
     // Piece
-    assert!(Piece::WSilverX.get_raw() == Piece::WSilver);
-    assert!(Piece::WBishopX.get_raw() == Piece::WBishop);
-    assert!(Piece::WRookX.get_raw() == Piece::WRook);
-    assert!(Piece::WPawnX.get_raw() == Piece::WPawn);
-    assert!(Piece::BSilverX.get_raw() == Piece::BSilver);
-    assert!(Piece::BBishopX.get_raw() == Piece::BBishop);
-    assert!(Piece::BRookX.get_raw() == Piece::BRook);
-    assert!(Piece::BPawnX.get_raw() == Piece::BPawn);
+    assert!(Piece::W_SILVER_X.get_raw() == Piece::W_SILVER);
+    assert!(Piece::W_BISHOP_X.get_raw() == Piece::W_BISHOP);
+    assert!(Piece::W_ROOK_X.get_raw() == Piece::W_ROOK);
+    assert!(Piece::W_PAWN_X.get_raw() == Piece::W_PAWN);
+    assert!(Piece::B_SILVER_X.get_raw() == Piece::B_SILVER);
+    assert!(Piece::B_BISHOP_X.get_raw() == Piece::B_BISHOP);
+    assert!(Piece::B_ROOK_X.get_raw() == Piece::B_ROOK);
+    assert!(Piece::B_PAWN_X.get_raw() == Piece::B_PAWN);
 
     // PieceType
-    assert!(PieceType::SilverX.get_raw() == PieceType::Silver);
-    assert!(PieceType::BishopX.get_raw() == PieceType::Bishop);
-    assert!(PieceType::RookX.get_raw() == PieceType::Rook);
-    assert!(PieceType::PawnX.get_raw() == PieceType::Pawn);
+    assert!(PieceType::SILVER_X.get_raw() == PieceType::SILVER);
+    assert!(PieceType::BISHOP_X.get_raw() == PieceType::BISHOP);
+    assert!(PieceType::ROOK_X.get_raw() == PieceType::ROOK);
+    assert!(PieceType::PAWN_X.get_raw() == PieceType::PAWN);
 }
 
 #[test]
 fn is_raw_test() {
     // Piece
-    assert!(Piece::WKing.is_raw());
-    assert!(Piece::WGold.is_raw());
-    assert!(Piece::WBishop.is_raw());
-    assert!(Piece::WRook.is_raw());
-    assert!(Piece::WPawn.is_raw());
-    assert!(Piece::BKing.is_raw());
-    assert!(Piece::BGold.is_raw());
-    assert!(Piece::BSilver.is_raw());
-    assert!(Piece::BBishop.is_raw());
-    assert!(Piece::BRook.is_raw());
-    assert!(Piece::BPawn.is_raw());
+    assert!(Piece::W_KING.is_raw());
+    assert!(Piece::W_GOLD.is_raw());
+    assert!(Piece::W_BISHOP.is_raw());
+    assert!(Piece::W_ROOK.is_raw());
+    assert!(Piece::W_PAWN.is_raw());
+    assert!(Piece::B_KING.is_raw());
+    assert!(Piece::B_GOLD.is_raw());
+    assert!(Piece::B_SILVER.is_raw());
+    assert!(Piece::B_BISHOP.is_raw());
+    assert!(Piece::B_ROOK.is_raw());
+    assert!(Piece::B_PAWN.is_raw());
 
     // PieceType
-    assert!(PieceType::King.is_raw());
-    assert!(PieceType::Gold.is_raw());
-    assert!(PieceType::Silver.is_raw());
-    assert!(PieceType::Bishop.is_raw());
-    assert!(PieceType::Rook.is_raw());
-    assert!(PieceType::Pawn.is_raw());
+    assert!(PieceType::KING.is_raw());
+    assert!(PieceType::GOLD.is_raw());
+    assert!(PieceType::SILVER.is_raw());
+    assert!(PieceType::BISHOP.is_raw());
+    assert!(PieceType::ROOK.is_raw());
+    assert!(PieceType::PAWN.is_raw());
 }
 
 #[test]
 fn get_piece_test() {
-    assert!(PieceType::NoPieceType.get_piece(Color::WHITE) == Piece::NoPiece);
+    assert!(PieceType::NO_PIECE_TYPE.get_piece(Color::WHITE) == Piece::NO_PIECE);
 
     // White
-    assert!(PieceType::King.get_piece(Color::WHITE) == Piece::WKing);
-    assert!(PieceType::Gold.get_piece(Color::WHITE) == Piece::WGold);
-    assert!(PieceType::Silver.get_piece(Color::WHITE) == Piece::WSilver);
-    assert!(PieceType::Bishop.get_piece(Color::WHITE) == Piece::WBishop);
-    assert!(PieceType::Rook.get_piece(Color::WHITE) == Piece::WRook);
-    assert!(PieceType::Pawn.get_piece(Color::WHITE) == Piece::WPawn);
-    assert!(PieceType::SilverX.get_piece(Color::WHITE) == Piece::WSilverX);
-    assert!(PieceType::BishopX.get_piece(Color::WHITE) == Piece::WBishopX);
-    assert!(PieceType::RookX.get_piece(Color::WHITE) == Piece::WRookX);
-    assert!(PieceType::PawnX.get_piece(Color::WHITE) == Piece::WPawnX);
+    assert!(PieceType::KING.get_piece(Color::WHITE) == Piece::W_KING);
+    assert!(PieceType::GOLD.get_piece(Color::WHITE) == Piece::W_GOLD);
+    assert!(PieceType::SILVER.get_piece(Color::WHITE) == Piece::W_SILVER);
+    assert!(PieceType::BISHOP.get_piece(Color::WHITE) == Piece::W_BISHOP);
+    assert!(PieceType::ROOK.get_piece(Color::WHITE) == Piece::W_ROOK);
+    assert!(PieceType::PAWN.get_piece(Color::WHITE) == Piece::W_PAWN);
+    assert!(PieceType::SILVER_X.get_piece(Color::WHITE) == Piece::W_SILVER_X);
+    assert!(PieceType::BISHOP_X.get_piece(Color::WHITE) == Piece::W_BISHOP_X);
+    assert!(PieceType::ROOK_X.get_piece(Color::WHITE) == Piece::W_ROOK_X);
+    assert!(PieceType::PAWN_X.get_piece(Color::WHITE) == Piece::W_PAWN_X);
 
     // Black
-    assert!(PieceType::King.get_piece(Color::BLACK) == Piece::BKing);
-    assert!(PieceType::Gold.get_piece(Color::BLACK) == Piece::BGold);
-    assert!(PieceType::Silver.get_piece(Color::BLACK) == Piece::BSilver);
-    assert!(PieceType::Bishop.get_piece(Color::BLACK) == Piece::BBishop);
-    assert!(PieceType::Rook.get_piece(Color::BLACK) == Piece::BRook);
-    assert!(PieceType::Pawn.get_piece(Color::BLACK) == Piece::BPawn);
-    assert!(PieceType::SilverX.get_piece(Color::BLACK) == Piece::BSilverX);
-    assert!(PieceType::BishopX.get_piece(Color::BLACK) == Piece::BBishopX);
-    assert!(PieceType::RookX.get_piece(Color::BLACK) == Piece::BRookX);
-    assert!(PieceType::PawnX.get_piece(Color::BLACK) == Piece::BPawnX);
+    assert!(PieceType::KING.get_piece(Color::BLACK) == Piece::B_KING);
+    assert!(PieceType::GOLD.get_piece(Color::BLACK) == Piece::B_GOLD);
+    assert!(PieceType::SILVER.get_piece(Color::BLACK) == Piece::B_SILVER);
+    assert!(PieceType::BISHOP.get_piece(Color::BLACK) == Piece::B_BISHOP);
+    assert!(PieceType::ROOK.get_piece(Color::BLACK) == Piece::B_ROOK);
+    assert!(PieceType::PAWN.get_piece(Color::BLACK) == Piece::B_PAWN);
+    assert!(PieceType::SILVER_X.get_piece(Color::BLACK) == Piece::B_SILVER_X);
+    assert!(PieceType::BISHOP_X.get_piece(Color::BLACK) == Piece::B_BISHOP_X);
+    assert!(PieceType::ROOK_X.get_piece(Color::BLACK) == Piece::B_ROOK_X);
+    assert!(PieceType::PAWN_X.get_piece(Color::BLACK) == Piece::B_PAWN_X);
 }
 
 #[test]
 fn get_op_piece_test() {
-    assert!(Piece::NoPiece.get_op_piece() == Piece::NoPiece);
+    assert!(Piece::NO_PIECE.get_op_piece() == Piece::NO_PIECE);
 
     // White
-    assert!(Piece::WKing.get_op_piece() == Piece::BKing);
-    assert!(Piece::WGold.get_op_piece() == Piece::BGold);
-    assert!(Piece::WSilver.get_op_piece() == Piece::BSilver);
-    assert!(Piece::WBishop.get_op_piece() == Piece::BBishop);
-    assert!(Piece::WRook.get_op_piece() == Piece::BRook);
-    assert!(Piece::WPawn.get_op_piece() == Piece::BPawn);
-    assert!(Piece::WSilverX.get_op_piece() == Piece::BSilverX);
-    assert!(Piece::WBishopX.get_op_piece() == Piece::BBishopX);
-    assert!(Piece::WRookX.get_op_piece() == Piece::BRookX);
-    assert!(Piece::WPawnX.get_op_piece() == Piece::BPawnX);
+    assert!(Piece::W_KING.get_op_piece() == Piece::B_KING);
+    assert!(Piece::W_GOLD.get_op_piece() == Piece::B_GOLD);
+    assert!(Piece::W_SILVER.get_op_piece() == Piece::B_SILVER);
+    assert!(Piece::W_BISHOP.get_op_piece() == Piece::B_BISHOP);
+    assert!(Piece::W_ROOK.get_op_piece() == Piece::B_ROOK);
+    assert!(Piece::W_PAWN.get_op_piece() == Piece::B_PAWN);
+    assert!(Piece::W_SILVER_X.get_op_piece() == Piece::B_SILVER_X);
+    assert!(Piece::W_BISHOP_X.get_op_piece() == Piece::B_BISHOP_X);
+    assert!(Piece::W_ROOK_X.get_op_piece() == Piece::B_ROOK_X);
+    assert!(Piece::W_PAWN_X.get_op_piece() == Piece::B_PAWN_X);
 
     // Black
-    assert!(Piece::BKing.get_op_piece() == Piece::WKing);
-    assert!(Piece::BGold.get_op_piece() == Piece::WGold);
-    assert!(Piece::BSilver.get_op_piece() == Piece::WSilver);
-    assert!(Piece::BBishop.get_op_piece() == Piece::WBishop);
-    assert!(Piece::BRook.get_op_piece() == Piece::WRook);
-    assert!(Piece::BPawn.get_op_piece() == Piece::WPawn);
-    assert!(Piece::BSilverX.get_op_piece() == Piece::WSilverX);
-    assert!(Piece::BBishopX.get_op_piece() == Piece::WBishopX);
-    assert!(Piece::BRookX.get_op_piece() == Piece::WRookX);
-    assert!(Piece::BPawnX.get_op_piece() == Piece::WPawnX);
+    assert!(Piece::B_KING.get_op_piece() == Piece::W_KING);
+    assert!(Piece::B_GOLD.get_op_piece() == Piece::W_GOLD);
+    assert!(Piece::B_SILVER.get_op_piece() == Piece::W_SILVER);
+    assert!(Piece::B_BISHOP.get_op_piece() == Piece::W_BISHOP);
+    assert!(Piece::B_ROOK.get_op_piece() == Piece::W_ROOK);
+    assert!(Piece::B_PAWN.get_op_piece() == Piece::W_PAWN);
+    assert!(Piece::B_SILVER_X.get_op_piece() == Piece::W_SILVER_X);
+    assert!(Piece::B_BISHOP_X.get_op_piece() == Piece::W_BISHOP_X);
+    assert!(Piece::B_ROOK_X.get_op_piece() == Piece::W_ROOK_X);
+    assert!(Piece::B_PAWN_X.get_op_piece() == Piece::W_PAWN_X);
 }
 
 #[test]
 fn get_color_test() {
-    assert!(Piece::NoPiece.get_color() == Color::NO_COLOR);
+    assert!(Piece::NO_PIECE.get_color() == Color::NO_COLOR);
 
-    assert!(Piece::WKing.get_color() == Color::WHITE);
-    assert!(Piece::WGold.get_color() == Color::WHITE);
-    assert!(Piece::WSilver.get_color() == Color::WHITE);
-    assert!(Piece::WBishop.get_color() == Color::WHITE);
-    assert!(Piece::WRook.get_color() == Color::WHITE);
-    assert!(Piece::WPawn.get_color() == Color::WHITE);
-    assert!(Piece::WSilverX.get_color() == Color::WHITE);
-    assert!(Piece::WBishopX.get_color() == Color::WHITE);
-    assert!(Piece::WRookX.get_color() == Color::WHITE);
-    assert!(Piece::WPawnX.get_color() == Color::WHITE);
+    assert!(Piece::W_KING.get_color() == Color::WHITE);
+    assert!(Piece::W_GOLD.get_color() == Color::WHITE);
+    assert!(Piece::W_SILVER.get_color() == Color::WHITE);
+    assert!(Piece::W_BISHOP.get_color() == Color::WHITE);
+    assert!(Piece::W_ROOK.get_color() == Color::WHITE);
+    assert!(Piece::W_PAWN.get_color() == Color::WHITE);
+    assert!(Piece::W_SILVER_X.get_color() == Color::WHITE);
+    assert!(Piece::W_BISHOP_X.get_color() == Color::WHITE);
+    assert!(Piece::W_ROOK_X.get_color() == Color::WHITE);
+    assert!(Piece::W_PAWN_X.get_color() == Color::WHITE);
 
-    assert!(Piece::BKing.get_color() == Color::BLACK);
-    assert!(Piece::BGold.get_color() == Color::BLACK);
-    assert!(Piece::BSilver.get_color() == Color::BLACK);
-    assert!(Piece::BBishop.get_color() == Color::BLACK);
-    assert!(Piece::BRook.get_color() == Color::BLACK);
-    assert!(Piece::BPawn.get_color() == Color::BLACK);
-    assert!(Piece::BSilverX.get_color() == Color::BLACK);
-    assert!(Piece::BBishopX.get_color() == Color::BLACK);
-    assert!(Piece::BRookX.get_color() == Color::BLACK);
-    assert!(Piece::BPawnX.get_color() == Color::BLACK);
+    assert!(Piece::B_KING.get_color() == Color::BLACK);
+    assert!(Piece::B_GOLD.get_color() == Color::BLACK);
+    assert!(Piece::B_SILVER.get_color() == Color::BLACK);
+    assert!(Piece::B_BISHOP.get_color() == Color::BLACK);
+    assert!(Piece::B_ROOK.get_color() == Color::BLACK);
+    assert!(Piece::B_PAWN.get_color() == Color::BLACK);
+    assert!(Piece::B_SILVER_X.get_color() == Color::BLACK);
+    assert!(Piece::B_BISHOP_X.get_color() == Color::BLACK);
+    assert!(Piece::B_ROOK_X.get_color() == Color::BLACK);
+    assert!(Piece::B_PAWN_X.get_color() == Color::BLACK);
 }
 
 #[test]
 fn get_piece_type_test() {
-    assert!(Piece::NoPiece.get_piece_type() == PieceType::NoPieceType);
+    assert!(Piece::NO_PIECE.get_piece_type() == PieceType::NO_PIECE_TYPE);
 
-    assert!(Piece::WKing.get_piece_type() == PieceType::King);
-    assert!(Piece::WGold.get_piece_type() == PieceType::Gold);
-    assert!(Piece::WSilver.get_piece_type() == PieceType::Silver);
-    assert!(Piece::WBishop.get_piece_type() == PieceType::Bishop);
-    assert!(Piece::WRook.get_piece_type() == PieceType::Rook);
-    assert!(Piece::WPawn.get_piece_type() == PieceType::Pawn);
-    assert!(Piece::WSilverX.get_piece_type() == PieceType::SilverX);
-    assert!(Piece::WBishopX.get_piece_type() == PieceType::BishopX);
-    assert!(Piece::WRookX.get_piece_type() == PieceType::RookX);
-    assert!(Piece::WPawnX.get_piece_type() == PieceType::PawnX);
+    assert!(Piece::W_KING.get_piece_type() == PieceType::KING);
+    assert!(Piece::W_GOLD.get_piece_type() == PieceType::GOLD);
+    assert!(Piece::W_SILVER.get_piece_type() == PieceType::SILVER);
+    assert!(Piece::W_BISHOP.get_piece_type() == PieceType::BISHOP);
+    assert!(Piece::W_ROOK.get_piece_type() == PieceType::ROOK);
+    assert!(Piece::W_PAWN.get_piece_type() == PieceType::PAWN);
+    assert!(Piece::W_SILVER_X.get_piece_type() == PieceType::SILVER_X);
+    assert!(Piece::W_BISHOP_X.get_piece_type() == PieceType::BISHOP_X);
+    assert!(Piece::W_ROOK_X.get_piece_type() == PieceType::ROOK_X);
+    assert!(Piece::W_PAWN_X.get_piece_type() == PieceType::PAWN_X);
 
-    assert!(Piece::BKing.get_piece_type() == PieceType::King);
-    assert!(Piece::BGold.get_piece_type() == PieceType::Gold);
-    assert!(Piece::BSilver.get_piece_type() == PieceType::Silver);
-    assert!(Piece::BBishop.get_piece_type() == PieceType::Bishop);
-    assert!(Piece::BRook.get_piece_type() == PieceType::Rook);
-    assert!(Piece::BPawn.get_piece_type() == PieceType::Pawn);
-    assert!(Piece::BSilverX.get_piece_type() == PieceType::SilverX);
-    assert!(Piece::BBishopX.get_piece_type() == PieceType::BishopX);
-    assert!(Piece::BRookX.get_piece_type() == PieceType::RookX);
-    assert!(Piece::BPawnX.get_piece_type() == PieceType::PawnX);
+    assert!(Piece::B_KING.get_piece_type() == PieceType::KING);
+    assert!(Piece::B_GOLD.get_piece_type() == PieceType::GOLD);
+    assert!(Piece::B_SILVER.get_piece_type() == PieceType::SILVER);
+    assert!(Piece::B_BISHOP.get_piece_type() == PieceType::BISHOP);
+    assert!(Piece::B_ROOK.get_piece_type() == PieceType::ROOK);
+    assert!(Piece::B_PAWN.get_piece_type() == PieceType::PAWN);
+    assert!(Piece::B_SILVER_X.get_piece_type() == PieceType::SILVER_X);
+    assert!(Piece::B_BISHOP_X.get_piece_type() == PieceType::BISHOP_X);
+    assert!(Piece::B_ROOK_X.get_piece_type() == PieceType::ROOK_X);
+    assert!(Piece::B_PAWN_X.get_piece_type() == PieceType::PAWN_X);
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -625,41 +493,41 @@ pub enum Direction {
 }
 
 pub const PIECE_ALL: [Piece; 20] = [
-    Piece::WKing,
-    Piece::WGold,
-    Piece::WSilver,
-    Piece::WBishop,
-    Piece::WRook,
-    Piece::WPawn,
-    Piece::WSilverX,
-    Piece::WBishopX,
-    Piece::WRookX,
-    Piece::WPawnX,
-    Piece::BKing,
-    Piece::BGold,
-    Piece::BSilver,
-    Piece::BBishop,
-    Piece::BRook,
-    Piece::BPawn,
-    Piece::BSilverX,
-    Piece::BBishopX,
-    Piece::BRookX,
-    Piece::BPawnX,
+    Piece::W_KING,
+    Piece::W_GOLD,
+    Piece::W_SILVER,
+    Piece::W_BISHOP,
+    Piece::W_ROOK,
+    Piece::W_PAWN,
+    Piece::W_SILVER_X,
+    Piece::W_BISHOP_X,
+    Piece::W_ROOK_X,
+    Piece::W_PAWN_X,
+    Piece::B_KING,
+    Piece::B_GOLD,
+    Piece::B_SILVER,
+    Piece::B_BISHOP,
+    Piece::B_ROOK,
+    Piece::B_PAWN,
+    Piece::B_SILVER_X,
+    Piece::B_BISHOP_X,
+    Piece::B_ROOK_X,
+    Piece::B_PAWN_X,
 ];
 pub const PIECE_TYPE_ALL: [PieceType; 10] = [
-    PieceType::King,
-    PieceType::Gold,
-    PieceType::Silver,
-    PieceType::Bishop,
-    PieceType::Rook,
-    PieceType::Pawn,
-    PieceType::SilverX,
-    PieceType::BishopX,
-    PieceType::RookX,
-    PieceType::PawnX,
+    PieceType::KING,
+    PieceType::GOLD,
+    PieceType::SILVER,
+    PieceType::BISHOP,
+    PieceType::ROOK,
+    PieceType::PAWN,
+    PieceType::SILVER_X,
+    PieceType::BISHOP_X,
+    PieceType::ROOK_X,
+    PieceType::PAWN_X,
 ];
 pub const HAND_PIECE_TYPE_ALL: [PieceType; 5] =
-    [PieceType::Gold, PieceType::Silver, PieceType::Bishop, PieceType::Rook, PieceType::Pawn];
+    [PieceType::GOLD, PieceType::SILVER, PieceType::BISHOP, PieceType::ROOK, PieceType::PAWN];
 pub const DIRECTION_ALL: [Direction; 8] = [
     Direction::N,
     Direction::NE,

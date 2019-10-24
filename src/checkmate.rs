@@ -71,7 +71,7 @@ fn defense(position: &mut Position, depth: i32) -> (bool, Move) {
     let moves = position.generate_moves();
 
     if moves.len() == 0
-        && position.kif[position.ply as usize - 1].piece.get_piece_type() == PieceType::Pawn
+        && position.kif[position.ply as usize - 1].piece.get_piece_type() == PieceType::PAWN
         && position.kif[position.ply as usize - 1].amount == 0
     {
         // 打ち歩詰め
