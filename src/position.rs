@@ -7,7 +7,7 @@ use bitboard::*;
 use r#move::*;
 use types::*;
 
-#[pyclass(module = "Position")]
+#[pyclass(module = "minishogilib")]
 #[derive(Copy, Clone)]
 pub struct Position {
     pub side_to_move: Color,
@@ -30,6 +30,15 @@ impl Position {
     #[new]
     pub fn new(obj: &PyRawObject) {
         obj.init(Position::empty_board());
+    }
+
+    fn __getstate__(&self) -> PyResult<(String)> {
+        Ok(self.sfen(true))
+    }
+
+    fn __setstate__(&mut self, sfen: &str) -> PyResult<()> {
+        self.set_sfen(&sfen);
+        Ok(())
     }
 
     /// entireがTrueの時には，過去の棋譜もコピーする
