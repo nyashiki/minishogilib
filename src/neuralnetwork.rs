@@ -376,3 +376,28 @@ fn piece_to_sequential_index(piece: Piece) -> usize {
         }
     }
 }
+
+#[test]
+fn piece_to_sequential_index_test() {
+    assert_eq!(piece_to_sequential_index(Piece::W_KING), 0);
+    assert_eq!(piece_to_sequential_index(Piece::W_GOLD), 1);
+    assert_eq!(piece_to_sequential_index(Piece::W_SILVER), 2);
+    assert_eq!(piece_to_sequential_index(Piece::W_BISHOP), 3);
+    assert_eq!(piece_to_sequential_index(Piece::W_ROOK), 4);
+    assert_eq!(piece_to_sequential_index(Piece::W_PAWN), 5);
+    assert_eq!(piece_to_sequential_index(Piece::W_SILVER_X), 6);
+    assert_eq!(piece_to_sequential_index(Piece::W_BISHOP_X), 7);
+    assert_eq!(piece_to_sequential_index(Piece::W_ROOK_X), 8);
+    assert_eq!(piece_to_sequential_index(Piece::W_PAWN_X), 9);
+
+    assert_eq!(piece_to_sequential_index(Piece::B_KING), 10);
+    assert_eq!(piece_to_sequential_index(Piece::B_GOLD), 11);
+    assert_eq!(piece_to_sequential_index(Piece::B_SILVER), 12);
+    assert_eq!(piece_to_sequential_index(Piece::B_BISHOP), 13);
+    assert_eq!(piece_to_sequential_index(Piece::B_ROOK), 14);
+    assert_eq!(piece_to_sequential_index(Piece::B_PAWN), 15);
+    assert_eq!(piece_to_sequential_index(Piece::B_SILVER_X), 16);
+    assert_eq!(piece_to_sequential_index(Piece::B_BISHOP_X), 17);
+    assert_eq!(piece_to_sequential_index(Piece::B_ROOK_X), 18);
+    assert_eq!(piece_to_sequential_index(Piece::B_PAWN_X), 19);
+}
