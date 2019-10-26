@@ -363,8 +363,16 @@ fn to_policy_index_test() {
 
 fn piece_to_sequential_index(piece: Piece) -> usize {
     if piece.get_color() == Color::WHITE {
-        piece.as_usize() - 1
+        if piece.is_raw() {
+            piece.as_usize() - 1
+        } else {
+            piece.as_usize() - 5
+        }
     } else {
-        piece.as_usize() - 7
+        if piece.is_raw() {
+            piece.as_usize() - 7
+        } else {
+            piece.as_usize() - 11
+        }
     }
 }
