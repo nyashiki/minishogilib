@@ -17,7 +17,7 @@ pub struct Move {
 #[pymethods]
 impl Move {
     pub fn sfen(&self) -> String {
-        if self.piece == Piece::NoPiece {
+        if self.piece == Piece::NO_PIECE {
             return "resign".to_string();
         }
 
@@ -26,7 +26,7 @@ impl Move {
         if self.amount == 0 {
             format!(
                 "{}*{}",
-                HAND_PIECE_TO_CHAR[self.piece.get_piece_type() as usize],
+                HAND_PIECE_TO_CHAR[self.piece.get_piece_type().as_usize()],
                 square_to_sfen(self.to)
             )
         } else {
@@ -39,7 +39,7 @@ impl Move {
     }
 
     pub fn csa_sfen(&self) -> String {
-        if self.piece == Piece::NoPiece {
+        if self.piece == Piece::NO_PIECE {
             return "%TORYO".to_string();
         }
 
@@ -52,7 +52,7 @@ impl Move {
             format!(
                 "00{}{}",
                 square_to_csa_sfen(self.to),
-                csa_piece[self.piece.get_piece_type() as usize]
+                csa_piece[self.piece.get_piece_type().as_usize()]
             )
         } else {
             let piece = if self.promotion {
@@ -65,7 +65,7 @@ impl Move {
                 "{}{}{}",
                 square_to_csa_sfen(self.from),
                 square_to_csa_sfen(self.to),
-                csa_piece[piece as usize]
+                csa_piece[piece.as_usize()]
             )
         }
     }
@@ -81,7 +81,7 @@ impl pyo3::class::basic::PyObjectProtocol for Move {
 #[pymethods]
 impl Move {
     pub fn is_null_move(&self) -> bool {
-        self.piece == Piece::NoPiece
+        self.piece == Piece::NO_PIECE
     }
 
     pub fn get_from(&self) -> usize {
@@ -105,7 +105,7 @@ impl Move {
     }
 
     pub fn get_hand_index(&self) -> usize {
-        self.piece.get_piece_type() as usize - 2
+        self.piece.get_piece_type().as_usize() - 2
     }
 }
 
@@ -138,19 +138,19 @@ impl Move {
             amount: 0,
             to: to,
             promotion: false,
-            capture_piece: Piece::NoPiece,
+            capture_piece: Piece::NO_PIECE,
         }
     }
 }
 
 pub static NULL_MOVE: Move = Move {
-    piece: Piece::NoPiece,
+    piece: Piece::NO_PIECE,
     from: SQUARE_NB,
     direction: Direction::N,
     amount: 0,
     to: 0,
     promotion: false,
-    capture_piece: Piece::NoPiece,
+    capture_piece: Piece::NO_PIECE,
 };
 
 pub fn square_to_sfen(square: usize) -> String {

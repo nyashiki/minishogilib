@@ -50,8 +50,8 @@ impl Position {
 
             for i in 0..SQUARE_NB {
                 // 盤上の駒を設定
-                if position.board[i] != Piece::NoPiece {
-                    if self.side_to_move == Color::White {
+                if position.board[i] != Piece::NO_PIECE {
+                    if self.side_to_move == Color::WHITE {
                         input_layer[(2
                             + h * CHANNEL_NUM_PER_HISTORY
                             + piece_to_sequential_index(position.board[i]))
@@ -75,32 +75,32 @@ impl Position {
 
             // 持ち駒を設定
             for piece_type in HAND_PIECE_TYPE_ALL.iter() {
-                if position.hand[self.side_to_move as usize][*piece_type as usize - 2] > 0 {
+                if position.hand[self.side_to_move.as_usize()][piece_type.as_usize() - 2] > 0 {
                     for i in 0..SQUARE_NB {
                         input_layer[(2
                             + h * CHANNEL_NUM_PER_HISTORY
                             + 23
-                            + *piece_type as usize
+                            + piece_type.as_usize()
                             - 2)
                             * SQUARE_NB
-                            + i] = position.hand[self.side_to_move as usize]
-                            [*piece_type as usize - 2] as f32;
+                            + i] = position.hand[self.side_to_move.as_usize()]
+                            [piece_type.as_usize() - 2] as f32;
                     }
                 }
 
-                if position.hand[self.side_to_move.get_op_color() as usize]
-                    [*piece_type as usize - 2]
+                if position.hand[self.side_to_move.get_op_color().as_usize()]
+                    [piece_type.as_usize() - 2]
                     > 0
                 {
                     for i in 0..SQUARE_NB {
                         input_layer[(2
                             + h * CHANNEL_NUM_PER_HISTORY
                             + 28
-                            + *piece_type as usize
+                            + piece_type.as_usize()
                             - 2)
                             * SQUARE_NB
-                            + i] = position.hand[self.side_to_move.get_op_color() as usize]
-                            [*piece_type as usize - 2] as f32;
+                            + i] = position.hand[self.side_to_move.get_op_color().as_usize()]
+                            [piece_type.as_usize() - 2] as f32;
                     }
                 }
             }
@@ -111,7 +111,7 @@ impl Position {
         }
 
         // 手番を設定
-        if self.side_to_move == Color::Black {
+        if self.side_to_move == Color::BLACK {
             for i in 0..SQUARE_NB {
                 input_layer[i] = 1f32;
             }
@@ -136,24 +136,24 @@ impl Position {
         let mut input_layer = [0f32; KP_INPUT_NUM];
 
         // 自分の玉に関するKP
-        let my_king_square = if self.side_to_move == Color::White {
-            ::bitboard::get_square(self.piece_bb[Piece::WKing as usize])
+        let my_king_square = if self.side_to_move == Color::WHITE {
+            ::bitboard::get_square(self.piece_bb[Piece::W_KING.as_usize()])
         } else {
-            ::bitboard::get_square(self.piece_bb[Piece::BKing as usize])
+            ::bitboard::get_square(self.piece_bb[Piece::B_KING.as_usize()])
         };
 
-        let offset = if self.side_to_move == Color::White {
+        let offset = if self.side_to_move == Color::WHITE {
             my_king_square * 19 * 25
         } else {
             (SQUARE_NB - 1 - my_king_square) * 19 * 25
         };
 
         for i in 0..SQUARE_NB {
-            if i == my_king_square || self.board[i] == Piece::NoPiece {
+            if i == my_king_square || self.board[i] == Piece::NO_PIECE {
                 continue;
             }
 
-            if self.side_to_move == Color::White {
+            if self.side_to_move == Color::WHITE {
                 let index = (piece_to_sequential_index(self.board[i]) - 1) * 25 + i;
                 input_layer[offset + index] = 1.0;
             } else {
@@ -164,32 +164,32 @@ impl Position {
         }
 
         // 相手の玉に関するKP
-        let op_king_square = if self.side_to_move == Color::White {
-            ::bitboard::get_square(self.piece_bb[Piece::BKing as usize])
+        let op_king_square = if self.side_to_move == Color::WHITE {
+            ::bitboard::get_square(self.piece_bb[Piece::B_KING.as_usize()])
         } else {
-            ::bitboard::get_square(self.piece_bb[Piece::WKing as usize])
+            ::bitboard::get_square(self.piece_bb[Piece::W_KING.as_usize()])
         };
 
-        let offset = if self.side_to_move == Color::White {
+        let offset = if self.side_to_move == Color::WHITE {
             25 * 19 * 25 + op_king_square * 19 * 25
         } else {
             25 * 19 * 25 + (SQUARE_NB - 1 - op_king_square) * 19 * 25
         };
 
         for i in 0..SQUARE_NB {
-            if i == op_king_square || self.board[i] == Piece::NoPiece {
+            if i == op_king_square || self.board[i] == Piece::NO_PIECE {
                 continue;
             }
 
-            if self.side_to_move == Color::White {
-                let index = if (self.board[i] as u8) < (Piece::BKing as u8) {
+            if self.side_to_move == Color::WHITE {
+                let index = if (self.board[i].as_usize()) < (Piece::B_KING.as_usize()) {
                     piece_to_sequential_index(self.board[i]) * 25 + i
                 } else {
                     (piece_to_sequential_index(self.board[i]) - 1) * 25 + i
                 };
                 input_layer[offset + index] = 1.0;
             } else {
-                let index = if (self.board[i] as u8) < (Piece::BKing as u8) {
+                let index = if (self.board[i].as_usize()) < (Piece::B_KING.as_usize()) {
                     piece_to_sequential_index(self.board[i]) * 25 + (SQUARE_NB - 1 - i)
                 } else {
                     (piece_to_sequential_index(self.board[i]) - 1) * 25 + (SQUARE_NB - 1 - i)
@@ -199,14 +199,14 @@ impl Position {
         }
 
         for piece_type in HAND_PIECE_TYPE_ALL.iter() {
-            input_layer[25 * 19 * 25 * 2 + *piece_type as usize - 2] =
-                self.hand[self.side_to_move as usize][*piece_type as usize - 2] as f32;
-            input_layer[25 * 19 * 25 * 2 + 5 + *piece_type as usize - 2] = self.hand
-                [self.side_to_move.get_op_color() as usize][*piece_type as usize - 2]
+            input_layer[25 * 19 * 25 * 2 + piece_type.as_usize() - 2] =
+                self.hand[self.side_to_move.as_usize()][piece_type.as_usize() - 2] as f32;
+            input_layer[25 * 19 * 25 * 2 + 5 + piece_type.as_usize() - 2] = self.hand
+                [self.side_to_move.get_op_color().as_usize()][piece_type.as_usize() - 2]
                 as f32;
         }
 
-        if self.side_to_move == Color::Black {
+        if self.side_to_move == Color::BLACK {
             input_layer[25 * 19 * 25 * 2 + 5 * 2] = 1.0;
         }
 
@@ -234,14 +234,14 @@ impl Move {
         let c: Color = self.piece.get_color();
 
         let index = if self.amount == 0 {
-            if c == Color::White {
+            if c == Color::WHITE {
                 (64 + self.get_hand_index(), self.to)
             } else {
                 (64 + self.get_hand_index(), SQUARE_NB - 1 - self.to)
             }
         } else {
             if self.get_promotion() {
-                if c == Color::White {
+                if c == Color::WHITE {
                     (32 + 4 * self.direction as usize + self.amount - 1, self.from)
                 } else {
                     (
@@ -250,7 +250,7 @@ impl Move {
                     )
                 }
             } else {
-                if c == Color::White {
+                if c == Color::WHITE {
                     (4 * self.direction as usize + self.amount - 1, self.from)
                 } else {
                     (
@@ -272,7 +272,7 @@ fn index_to_move(position: &Position, index: usize) -> Move {
     if index >= 64 * 25 {
         for i in 0..5 {
             for j in 0..SQUARE_NB {
-                let temp = if position.side_to_move == Color::White {
+                let temp = if position.side_to_move == Color::WHITE {
                     (64 + i) * 25 + j
                 } else {
                     (64 + i) * 25 + (SQUARE_NB - j - 1)
@@ -291,7 +291,7 @@ fn index_to_move(position: &Position, index: usize) -> Move {
             for amount in 0..4 {
                 for i in 0..SQUARE_NB {
                     for promotion in 0..2 {
-                        let temp = if position.side_to_move == Color::White {
+                        let temp = if position.side_to_move == Color::WHITE {
                             (32 * promotion + ((direction * 4) + amount)) * 25 + i
                         } else {
                             (32 * promotion + ((((direction + 4) % 8) * 4) + amount)) * 25
@@ -300,13 +300,13 @@ fn index_to_move(position: &Position, index: usize) -> Move {
 
                         if temp == index {
                             moves.push(Move::board_move(
-                                Piece::NoPiece,
+                                Piece::NO_PIECE,
                                 i,
                                 DIRECTION_ALL[direction],
                                 amount + 1,
                                 0,
                                 promotion != 0,
-                                Piece::NoPiece,
+                                Piece::NO_PIECE,
                             ));
                         }
                     }
@@ -362,29 +362,42 @@ fn to_policy_index_test() {
 }
 
 fn piece_to_sequential_index(piece: Piece) -> usize {
-    match piece {
-        Piece::WKing => 0,
-        Piece::WGold => 1,
-        Piece::WSilver => 2,
-        Piece::WBishop => 3,
-        Piece::WRook => 4,
-        Piece::WPawn => 5,
-        Piece::WSilverX => 6,
-        Piece::WBishopX => 7,
-        Piece::WRookX => 8,
-        Piece::WPawnX => 9,
-
-        Piece::BKing => 10,
-        Piece::BGold => 11,
-        Piece::BSilver => 12,
-        Piece::BBishop => 13,
-        Piece::BRook => 14,
-        Piece::BPawn => 15,
-        Piece::BSilverX => 16,
-        Piece::BBishopX => 17,
-        Piece::BRookX => 18,
-        Piece::BPawnX => 19,
-
-        Piece::NoPiece => 20,
+    if piece.get_color() == Color::WHITE {
+        if piece.is_raw() {
+            piece.as_usize() - 1
+        } else {
+            piece.as_usize() - 5
+        }
+    } else {
+        if piece.is_raw() {
+            piece.as_usize() - 7
+        } else {
+            piece.as_usize() - 11
+        }
     }
+}
+
+#[test]
+fn piece_to_sequential_index_test() {
+    assert_eq!(piece_to_sequential_index(Piece::W_KING), 0);
+    assert_eq!(piece_to_sequential_index(Piece::W_GOLD), 1);
+    assert_eq!(piece_to_sequential_index(Piece::W_SILVER), 2);
+    assert_eq!(piece_to_sequential_index(Piece::W_BISHOP), 3);
+    assert_eq!(piece_to_sequential_index(Piece::W_ROOK), 4);
+    assert_eq!(piece_to_sequential_index(Piece::W_PAWN), 5);
+    assert_eq!(piece_to_sequential_index(Piece::W_SILVER_X), 6);
+    assert_eq!(piece_to_sequential_index(Piece::W_BISHOP_X), 7);
+    assert_eq!(piece_to_sequential_index(Piece::W_ROOK_X), 8);
+    assert_eq!(piece_to_sequential_index(Piece::W_PAWN_X), 9);
+
+    assert_eq!(piece_to_sequential_index(Piece::B_KING), 10);
+    assert_eq!(piece_to_sequential_index(Piece::B_GOLD), 11);
+    assert_eq!(piece_to_sequential_index(Piece::B_SILVER), 12);
+    assert_eq!(piece_to_sequential_index(Piece::B_BISHOP), 13);
+    assert_eq!(piece_to_sequential_index(Piece::B_ROOK), 14);
+    assert_eq!(piece_to_sequential_index(Piece::B_PAWN), 15);
+    assert_eq!(piece_to_sequential_index(Piece::B_SILVER_X), 16);
+    assert_eq!(piece_to_sequential_index(Piece::B_BISHOP_X), 17);
+    assert_eq!(piece_to_sequential_index(Piece::B_ROOK_X), 18);
+    assert_eq!(piece_to_sequential_index(Piece::B_PAWN_X), 19);
 }

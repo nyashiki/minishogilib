@@ -9,8 +9,8 @@ pub type Bitboard = u32;
 lazy_static! {
     /// 近接の利きを保持するbitboard
     /// ADJACENT_ATTACK[square][piece]として参照する
-    static ref ADJACENT_ATTACK: [[Bitboard; Piece::BPawnX as usize + 1]; SQUARE_NB] = {
-        let mut aa: [[Bitboard; Piece::BPawnX as usize + 1]; SQUARE_NB] = [[0; Piece::BPawnX as usize + 1]; SQUARE_NB];
+    static ref ADJACENT_ATTACK: [[Bitboard; Piece::B_PAWN_X.as_usize() + 1]; SQUARE_NB] = {
+        let mut aa: [[Bitboard; Piece::B_PAWN_X.as_usize() + 1]; SQUARE_NB] = [[0; Piece::B_PAWN_X.as_usize() + 1]; SQUARE_NB];
 
         let mut position: Position = Position::empty_board();
 
@@ -59,10 +59,10 @@ lazy_static! {
                     }
 
                     let move_to = ((i as i8) + MOVE_TOS[move_dir as usize]) as usize;
-                    aa[i][*piece as usize] |= 1 << move_to;
+                    aa[i][piece.as_usize()] |= 1 << move_to;
                 }
             }
-            position.board[i] = Piece::NoPiece;
+            position.board[i] = Piece::NO_PIECE;
         }
 
         return aa;
@@ -217,7 +217,7 @@ lazy_static! {
 
                 for j in 0..5 {
                     if player_bb & (1 << j) != 0 {
-                        position.board[right_top + 4 * j] = Piece::BPawn;
+                        position.board[right_top + 4 * j] = Piece::B_PAWN;
                     }
                     if right_top + 4 * j == left_bottom {
                         break;
@@ -258,7 +258,7 @@ lazy_static! {
 
                         ba[i][player_bb] |= 1 << move_to;
 
-                        if position.board[move_to] != Piece::NoPiece {
+                        if position.board[move_to] != Piece::NO_PIECE {
                             break;
                         }
 
@@ -313,7 +313,7 @@ lazy_static! {
 
                 for j in 0..5 {
                     if player_bb & (1 << j) != 0 {
-                        position.board[left_top + 6 * j] = Piece::BPawn;
+                        position.board[left_top + 6 * j] = Piece::B_PAWN;
                     }
                     if left_top + 6 * j == right_bottom {
                         break;
@@ -354,7 +354,7 @@ lazy_static! {
 
                         ba[i][player_bb] |= 1 << move_to;
 
-                        if position.board[move_to] != Piece::NoPiece {
+                        if position.board[move_to] != Piece::NO_PIECE {
                             break;
                         }
 
@@ -387,7 +387,7 @@ lazy_static! {
 
                 for j in 0..5 {
                     if player_bb & (1 << j) != 0 {
-                        position.board[left + j] = Piece::BPawn;
+                        position.board[left + j] = Piece::B_PAWN;
                     }
                 }
 
@@ -412,7 +412,7 @@ lazy_static! {
 
                         ra[i][player_bb] |= 1 << move_to;
 
-                        if position.board[move_to] != Piece::NoPiece {
+                        if position.board[move_to] != Piece::NO_PIECE {
                             break;
                         }
 
@@ -442,7 +442,7 @@ lazy_static! {
 
                 for j in 0..5 {
                     if player_bb & (1 << j) != 0 {
-                        position.board[top + 5 * j] = Piece::BPawn;
+                        position.board[top + 5 * j] = Piece::B_PAWN;
                     }
                 }
 
@@ -468,7 +468,7 @@ lazy_static! {
 
                         ra[i][player_bb] |= 1 << move_to;
 
-                        if position.board[move_to] != Piece::NoPiece {
+                        if position.board[move_to] != Piece::NO_PIECE {
                             break;
                         }
 
@@ -500,7 +500,7 @@ pub fn init() {
 }
 
 pub fn adjacent_attack(square: usize, piece: Piece) -> Bitboard {
-    ADJACENT_ATTACK[square][piece as usize]
+    ADJACENT_ATTACK[square][piece.as_usize()]
 }
 
 pub fn bishop_attack(square: usize, player_bb: Bitboard) -> Bitboard {
