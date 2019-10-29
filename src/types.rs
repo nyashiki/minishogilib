@@ -1,5 +1,5 @@
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Color(u8);
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Color(pub u8);
 
 impl Color {
     pub const WHITE: Color = Color(0);
