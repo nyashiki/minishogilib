@@ -4,11 +4,12 @@ use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, Write};
 
 use numpy::PyArray1;
+use position::*;
 use pyo3::prelude::*;
-use rand::{distributions::Uniform, Rng};
+use rand::Rng;
 use rayon::prelude::*;
 use record::*;
-use position::*;
+use types::*;
 
 #[pyclass]
 pub struct Reservoir {
@@ -68,32 +69,51 @@ impl Reservoir {
             cumulative_plys[i + 1] = cumulative_plys[i] + self.learning_targets[i].len();
         }
 
-        let range = Uniform::from(0..cumulative_plys[self.max_size]);
-        let mut indicies: std::vec::Vec<usize> = rand::thread_rng().sample_iter(&range).take(mini_batch_size).collect();
-
-        indicies.sort();
+        let mut rng = rand::thread_rng();
+        let range = cumulative_plys[self.max_size];
 
         let mut targets = vec![(0, 0); mini_batch_size];
 
-        let mut lo = 0;
-        for i in 0..mini_batch_size {
-            let mut ok = lo;
+        let white_win_target_count_max = mini_batch_size / 2;
+        let black_win_target_count_max = mini_batch_size - white_win_target_count_max;
+
+        let mut white_win_target_count = 0;
+        let mut black_win_target_count = 0;
+        let mut counter = 0;
+
+        while white_win_target_count < white_win_target_count_max || black_win_target_count < black_win_target_count_max {
+            let mut ok = 0;
             let mut ng = self.max_size + 1;
+
+            let index = rng.gen_range(0, range);
 
             while ng - ok > 1 {
                 let mid = (ok + ng) / 2;
 
-                if indicies[i] >= cumulative_plys[mid] {
+                if index >= cumulative_plys[mid] {
                     ok = mid;
                 } else {
                     ng = mid;
                 }
             }
 
-            let ply = self.learning_targets[ok][indicies[i] - cumulative_plys[ok]];
-            targets[i] = (ok, ply);
+            if Color(self.records[ok].winner) == Color::WHITE {
+                if white_win_target_count == white_win_target_count_max {
+                    continue;
+                }
 
-            lo = ok;
+                white_win_target_count += 1;
+            } else if Color(self.records[ok].winner) == Color::BLACK {
+                if black_win_target_count == black_win_target_count_max {
+                    continue;
+                }
+
+                black_win_target_count += 1;
+            }
+
+            let ply = self.learning_targets[ok][index - cumulative_plys[ok]];
+            targets[counter] = (ok, ply);
+            counter += 1;
         }
 
         let data: std::vec::Vec<_> = targets.par_iter().map(move |&target| {
