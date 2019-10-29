@@ -20,7 +20,6 @@ pub mod types;
 pub mod zobrist;
 
 use pyo3::prelude::*;
-use rayon::prelude::*;
 
 
 #[pymodule]
