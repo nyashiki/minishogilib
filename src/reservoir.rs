@@ -109,6 +109,8 @@ impl Reservoir {
                 }
 
                 black_win_target_count += 1;
+            } else {
+                continue;
             }
 
             let ply = self.learning_targets[ok][index - cumulative_plys[ok]];
