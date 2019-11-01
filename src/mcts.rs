@@ -254,9 +254,8 @@ impl MCTS {
         position: &Position,
         np_policy: &PyArray1<f32>,
         mut value: f32,
-        dirichlet_noise: bool,
     ) -> f32 {
-        if !dirichlet_noise && self.game_tree[node].n > 0 {
+        if self.game_tree[node].n > 0 {
             return self.game_tree[node].v;
         }
 
@@ -302,67 +301,28 @@ impl MCTS {
             }
         }
 
-        let mut noise: std::vec::Vec<f64> = vec![0.0; moves.len()];
-
-        if dirichlet_noise {
-            let mut noise_sum = 0.0;
-            let gamma = rand::distributions::Gamma::new(0.34, 1.0);
-
-            for (i, _) in moves.iter().enumerate() {
-                let v = gamma.sample(&mut rand::thread_rng());
-
-                noise[i] = v;
-                noise_sum += v;
-            }
-
-            for v in &mut noise {
-                *v /= noise_sum;
-            }
-        }
-
         // set policy and vaue
         if !self.game_tree[node].is_terminal {
-            if self.game_tree[node].children.len() == 0 {
-                for (i, m) in moves.iter().enumerate() {
-                    let policy_index = m.to_policy_index();
+            for m in &moves {
+                let policy_index = m.to_policy_index();
 
-                    let mut index = self.node_index;
-                    loop {
-                        if index == 0 {
-                            index = 1;
-                        }
-
-                        if !self.game_tree[index].is_used {
-                            let p = if dirichlet_noise {
-                                ((policy[policy_index] - policy_max).exp() / legal_policy_sum)
-                                    * 0.75
-                                    + (noise[i] as f32) * 0.25
-                            } else {
-                                (policy[policy_index] - policy_max).exp() / legal_policy_sum
-                            };
-
-                            self.game_tree[index] = Node::new(node, *m, p, true);
-                            self.game_tree[node].children.push(index);
-                            self.node_index = (index + 1) % self.size;
-                            self.node_used_count += 1;
-
-                            break;
-                        }
-                        index = (index + 1) % self.size;
+                let mut index = self.node_index;
+                loop {
+                    if index == 0 {
+                        index = 1;
                     }
-                }
-            } else if dirichlet_noise {
-                let children = self.game_tree[node].children.clone();
 
-                for (i, child) in children.iter().enumerate() {
-                    let policy_index = self.game_tree[*child].m.to_policy_index();
+                    if !self.game_tree[index].is_used {
+                        let p = (policy[policy_index] - policy_max).exp() / legal_policy_sum;
 
-                    self.game_tree[*child].p = if dirichlet_noise {
-                        ((policy[policy_index] - policy_max).exp() / legal_policy_sum) * 0.75
-                            + (noise[i] as f32) * 0.25
-                    } else {
-                        (policy[policy_index] - policy_max).exp() / legal_policy_sum
-                    };
+                        self.game_tree[index] = Node::new(node, *m, p, true);
+                        self.game_tree[node].children.push(index);
+                        self.node_index = (index + 1) % self.size;
+                        self.node_used_count += 1;
+
+                        break;
+                    }
+                    index = (index + 1) % self.size;
                 }
             }
         }
@@ -370,6 +330,29 @@ impl MCTS {
         self.game_tree[node].v = value;
 
         return value;
+    }
+
+    pub fn add_noise(&mut self, node: usize) {
+        let mut noise: std::vec::Vec<f64> = vec![0.0; self.game_tree[node].children.len()];
+        let mut noise_sum = 0.0;
+        let gamma = rand::distributions::Gamma::new(0.34, 1.0);
+
+        for i in 0..self.game_tree[node].children.len() {
+            let v = gamma.sample(&mut rand::thread_rng());
+
+            noise[i] = v;
+            noise_sum += v;
+        }
+
+        for v in &mut noise {
+            *v /= noise_sum;
+        }
+
+        let children = self.game_tree[node].children.clone();
+
+        for (i, child) in children.iter().enumerate() {
+            self.game_tree[*child].p = (0.75 * self.game_tree[*child].p) + (0.25 * noise[i] as f32);
+        }
     }
 
     pub fn backpropagate(&mut self, leaf_node: usize, value: f32) {
