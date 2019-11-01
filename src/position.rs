@@ -1,6 +1,5 @@
 #[cfg(test)]
 use rand::seq::SliceRandom;
-
 use pyo3::prelude::*;
 
 use bitboard::*;
@@ -1882,4 +1881,42 @@ fn do_move_simple_test() {
             position.do_move(random_move);
         }
     }
+}
+
+#[cfg(test)]
+fn count_nodes(position: &mut Position, limit: u8) -> u64 {
+    if limit == 0 {
+        return 1;
+    }
+
+    if position.is_repetition().0 {
+        return 1;
+    }
+
+    let moves = position.generate_moves();
+    let mut count = 0;
+
+    for m in &moves {
+        position.do_move(m);
+
+        count += count_nodes(position, limit  - 1);
+
+        position.undo_move();
+    }
+
+    return count;
+}
+
+#[test]
+fn perft() {
+    let mut position: Position = Position::empty_board();
+    position.set_start_position();
+
+    assert_eq!(count_nodes(&mut position, 1), 14);
+    assert_eq!(count_nodes(&mut position, 2), 181);
+    assert_eq!(count_nodes(&mut position, 3), 2512);
+    assert_eq!(count_nodes(&mut position, 4), 35401);
+    assert_eq!(count_nodes(&mut position, 5), 533203);
+    assert_eq!(count_nodes(&mut position, 6), 8276188);
+    assert_eq!(count_nodes(&mut position, 7), 132680698);
 }
