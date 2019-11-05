@@ -996,16 +996,17 @@ impl Position {
         // 近接駒に王手されている場合、持ち駒を打つ手は全て非合法手
         if is_hand && (allow_illegal || self.adjacent_check_bb[self.ply as usize] == 0) {
             // 駒のない升を列挙
-            let mut empty_squares: Vec<usize> = Vec::new();
-            for i in 0..SQUARE_NB {
-                if self.board[i] == Piece::NO_PIECE {
-                    empty_squares.push(i);
-                }
-            }
+            let empty_squares: Bitboard = ONE_BB ^ (self.player_bb[Color::WHITE.as_usize()] | self.player_bb[Color::BLACK.as_usize()]);
 
             for piece_type in HAND_PIECE_TYPE_ALL.iter() {
                 if self.hand[self.side_to_move.as_usize()][piece_type.as_usize() - 2] > 0 {
-                    for target in &empty_squares {
+
+                    let mut empty_squares = empty_squares;
+
+                    while empty_squares != 0 {
+                        let target = get_square(empty_squares);
+                        empty_squares ^= 1 << target;
+
                         // 二歩は禁じ手
                         if *piece_type == PieceType::PAWN
                             && self.pawn_flags[self.side_to_move.as_usize()] & (1 << (target % 5))
@@ -1016,15 +1017,15 @@ impl Position {
 
                         // 行き場のない駒を打たない
                         if *piece_type == PieceType::PAWN
-                            && ((self.side_to_move == Color::WHITE && *target < 5)
-                                || (self.side_to_move == Color::BLACK && *target >= 20))
+                            && ((self.side_to_move == Color::WHITE && target < 5)
+                                || (self.side_to_move == Color::BLACK && target >= 20))
                         {
                             continue;
                         }
 
                         moves.push(Move::hand_move(
                             piece_type.get_piece(self.side_to_move),
-                            *target,
+                            target,
                         ));
                     }
                 }

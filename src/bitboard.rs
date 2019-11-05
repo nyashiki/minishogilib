@@ -6,6 +6,8 @@ use types::*;
 
 pub type Bitboard = u32;
 
+pub const ONE_BB: Bitboard = 0b11111_11111_11111_11111_11111;
+
 lazy_static! {
     /// 近接の利きを保持するbitboard
     /// ADJACENT_ATTACK[square][piece]として参照する
