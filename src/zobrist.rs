@@ -22,8 +22,7 @@ lazy_static! {
 
 lazy_static! {
     pub static ref HAND_TABLE: [[[u64; 3]; 5]; 2] = {
-        let mut table: [[[u64; 3]; 5]; 2] =
-            [[[0; 3]; 5]; 2];
+        let mut table: [[[u64; 3]; 5]; 2] = [[[0; 3]; 5]; 2];
 
         let mut rng: StdRng = SeedableRng::from_seed([0; 32]);
 

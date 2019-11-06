@@ -21,7 +21,6 @@ pub mod zobrist;
 
 use pyo3::prelude::*;
 
-
 #[pymodule]
 fn minishogilib(_py: Python, m: &PyModule) -> PyResult<()> {
     r#move::init();

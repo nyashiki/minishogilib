@@ -1,6 +1,6 @@
+use pyo3::prelude::*;
 #[cfg(test)]
 use rand::seq::SliceRandom;
-use pyo3::prelude::*;
 
 use bitboard::*;
 use r#move::*;
@@ -20,7 +20,7 @@ pub struct Position {
     pub piece_bb: [Bitboard; Piece::B_PAWN_X.as_usize() + 1],
     pub player_bb: [Bitboard; 2],
     pub adjacent_check_bb: [Bitboard; MAX_PLY + 1], // 近接駒による王手を表すbitboard
-    pub long_check_bb: [Bitboard; MAX_PLY + 1],     // 長い利きを持つ駒による王手を表すbitboard
+    pub long_check_bb: [Bitboard; MAX_PLY + 1],     /* 長い利きを持つ駒による王手を表すbitboard */
     pub sequent_check_count: [[i8; 2]; MAX_PLY + 1],
 }
 
@@ -346,8 +346,15 @@ impl Position {
 
             // hash値の更新
             self.hash[self.ply as usize + 1].0 ^= ::zobrist::BOARD_TABLE[m.to][m.piece.as_usize()];
-            self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2][self.hand[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2] as usize + 1];
-            self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2][self.hand[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2] as usize];
+            self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE
+                [self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2]
+                [self.hand[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2]
+                    as usize
+                    + 1];
+            self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE
+                [self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2]
+                [self.hand[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2]
+                    as usize];
         } else {
             // 盤上の駒を動かす場合
 
@@ -367,8 +374,19 @@ impl Position {
                 // hashの更新
                 self.hash[self.ply as usize + 1].0 ^=
                     ::zobrist::BOARD_TABLE[m.to][m.capture_piece.as_usize()];
-                self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE[self.side_to_move.as_usize()][m.capture_piece.get_piece_type().get_raw().as_usize() - 2][self.hand[self.side_to_move.as_usize()][m.capture_piece.get_piece_type().get_raw().as_usize() - 2] as usize - 1];
-                self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE[self.side_to_move.as_usize()][m.capture_piece.get_piece_type().get_raw().as_usize() - 2][self.hand[self.side_to_move.as_usize()][m.capture_piece.get_piece_type().get_raw().as_usize() - 2] as usize];
+                self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE
+                    [self.side_to_move.as_usize()]
+                    [m.capture_piece.get_piece_type().get_raw().as_usize() - 2][self
+                    .hand[self.side_to_move.as_usize()]
+                    [m.capture_piece.get_piece_type().get_raw().as_usize() - 2]
+                    as usize
+                    - 1];
+                self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE
+                    [self.side_to_move.as_usize()]
+                    [m.capture_piece.get_piece_type().get_raw().as_usize() - 2][self
+                    .hand[self.side_to_move.as_usize()]
+                    [m.capture_piece.get_piece_type().get_raw().as_usize() - 2]
+                    as usize];
             }
 
             if m.promotion {
@@ -393,7 +411,8 @@ impl Position {
             self.player_bb[self.side_to_move.as_usize()] ^= 1 << m.from;
 
             // hash値の更新
-            self.hash[self.ply as usize + 1].0 ^= ::zobrist::BOARD_TABLE[m.from][m.piece.as_usize()];
+            self.hash[self.ply as usize + 1].0 ^=
+                ::zobrist::BOARD_TABLE[m.from][m.piece.as_usize()];
             self.hash[self.ply as usize + 1].0 ^=
                 ::zobrist::BOARD_TABLE[m.to][self.board[m.to].as_usize()];
         }
@@ -682,7 +701,8 @@ impl Position {
         // 角による王手
         let bishop_check_bb = bishop_attack(king_square, player_bb);
         self.long_check_bb[self.ply as usize] |= bishop_check_bb
-            & self.piece_bb[PieceType::BISHOP.get_piece(self.side_to_move.get_op_color()).as_usize()];
+            & self.piece_bb
+                [PieceType::BISHOP.get_piece(self.side_to_move.get_op_color()).as_usize()];
         self.long_check_bb[self.ply as usize] |= bishop_check_bb
             & self.piece_bb
                 [PieceType::BISHOP_X.get_piece(self.side_to_move.get_op_color()).as_usize()];
@@ -692,7 +712,8 @@ impl Position {
         self.long_check_bb[self.ply as usize] |= rook_check_bb
             & self.piece_bb[PieceType::ROOK.get_piece(self.side_to_move.get_op_color()).as_usize()];
         self.long_check_bb[self.ply as usize] |= rook_check_bb
-            & self.piece_bb[PieceType::ROOK_X.get_piece(self.side_to_move.get_op_color()).as_usize()];
+            & self.piece_bb
+                [PieceType::ROOK_X.get_piece(self.side_to_move.get_op_color()).as_usize()];
     }
 
     fn calculate_hash(&self) -> (u64, u64) {
@@ -779,12 +800,12 @@ impl Position {
         for piece_type in &HAND_PIECE_TYPE_ALL {
             if self.hand[Color::WHITE.as_usize()][piece_type.as_usize() - 2] > 0 {
                 sfen_position.push_str(
-                    &self.hand[Color::WHITE.as_usize()][piece_type.as_usize()- 2].to_string(),
+                    &self.hand[Color::WHITE.as_usize()][piece_type.as_usize() - 2].to_string(),
                 );
                 sfen_position.push_str(&piece_to_string(piece_type.get_piece(Color::WHITE)));
                 capture_flag = true;
             }
-            if self.hand[Color::BLACK.as_usize()][piece_type.as_usize()- 2] > 0 {
+            if self.hand[Color::BLACK.as_usize()][piece_type.as_usize() - 2] > 0 {
                 sfen_position.push_str(
                     &self.hand[Color::BLACK.as_usize()][piece_type.as_usize() - 2].to_string(),
                 );
@@ -889,8 +910,8 @@ impl Position {
                     }
                 }
 
-                let all_player_bb =
-                    self.player_bb[Color::WHITE.as_usize()] | self.player_bb[Color::BLACK.as_usize()];
+                let all_player_bb = self.player_bb[Color::WHITE.as_usize()]
+                    | self.player_bb[Color::BLACK.as_usize()];
 
                 // 飛び駒の移動
                 // 角、馬
@@ -1005,11 +1026,12 @@ impl Position {
         // 近接駒に王手されている場合、持ち駒を打つ手は全て非合法手
         if is_hand && (allow_illegal || self.adjacent_check_bb[self.ply as usize] == 0) {
             // 駒のない升を列挙
-            let empty_squares: Bitboard = ONE_BB ^ (self.player_bb[Color::WHITE.as_usize()] | self.player_bb[Color::BLACK.as_usize()]);
+            let empty_squares: Bitboard = ONE_BB
+                ^ (self.player_bb[Color::WHITE.as_usize()]
+                    | self.player_bb[Color::BLACK.as_usize()]);
 
             for piece_type in HAND_PIECE_TYPE_ALL.iter() {
                 if self.hand[self.side_to_move.as_usize()][piece_type.as_usize() - 2] > 0 {
-
                     let mut empty_squares = empty_squares;
 
                     while empty_squares != 0 {
@@ -1032,10 +1054,8 @@ impl Position {
                             continue;
                         }
 
-                        moves.push(Move::hand_move(
-                            piece_type.get_piece(self.side_to_move),
-                            target,
-                        ));
+                        moves
+                            .push(Move::hand_move(piece_type.get_piece(self.side_to_move), target));
                     }
                 }
             }
@@ -1064,11 +1084,13 @@ impl Position {
                         let bishop_check_bb = bishop_attack(king_square, player_bb);
                         if bishop_check_bb
                             & self.piece_bb[PieceType::BISHOP
-                                .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                .get_piece(self.side_to_move.get_op_color())
+                                .as_usize()]
                             != 0
                             || bishop_check_bb
                                 & self.piece_bb[PieceType::BISHOP_X
-                                    .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                    .get_piece(self.side_to_move.get_op_color())
+                                    .as_usize()]
                                 != 0
                         {
                             return false;
@@ -1078,11 +1100,13 @@ impl Position {
                         let rook_check_bb = rook_attack(king_square, player_bb);
                         if rook_check_bb
                             & self.piece_bb[PieceType::ROOK
-                                .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                .get_piece(self.side_to_move.get_op_color())
+                                .as_usize()]
                             != 0
                             || rook_check_bb
                                 & self.piece_bb[PieceType::ROOK_X
-                                    .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                    .get_piece(self.side_to_move.get_op_color())
+                                    .as_usize()]
                                 != 0
                         {
                             return false;
@@ -1101,11 +1125,13 @@ impl Position {
 
                             if bishop_check_bb
                                 & self.piece_bb[PieceType::BISHOP
-                                    .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                    .get_piece(self.side_to_move.get_op_color())
+                                    .as_usize()]
                                 != 0
                                 || bishop_check_bb
                                     & self.piece_bb[PieceType::BISHOP_X
-                                        .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                        .get_piece(self.side_to_move.get_op_color())
+                                        .as_usize()]
                                     != 0
                             {
                                 return false;
@@ -1116,11 +1142,13 @@ impl Position {
 
                             if rook_check_bb
                                 & self.piece_bb[PieceType::ROOK
-                                    .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                    .get_piece(self.side_to_move.get_op_color())
+                                    .as_usize()]
                                 != 0
                                 || rook_check_bb
                                     & self.piece_bb[PieceType::ROOK_X
-                                        .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                        .get_piece(self.side_to_move.get_op_color())
+                                        .as_usize()]
                                     != 0
                             {
                                 return false;
@@ -1132,7 +1160,8 @@ impl Position {
                                     m.to as usize,
                                     piece_type.get_piece(self.side_to_move),
                                 ) & self.piece_bb[piece_type
-                                    .get_piece(self.side_to_move.get_op_color()).as_usize()];
+                                    .get_piece(self.side_to_move.get_op_color())
+                                    .as_usize()];
 
                                 if check_bb != 0 {
                                     return false;
@@ -1160,11 +1189,13 @@ impl Position {
                                 bishop_attack(king_square, player_bb) & !(1 << m.to);
                             if bishop_check_bb
                                 & self.piece_bb[PieceType::BISHOP
-                                    .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                    .get_piece(self.side_to_move.get_op_color())
+                                    .as_usize()]
                                 != 0
                                 || bishop_check_bb
                                     & self.piece_bb[PieceType::BISHOP_X
-                                        .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                        .get_piece(self.side_to_move.get_op_color())
+                                        .as_usize()]
                                     != 0
                             {
                                 return false;
@@ -1175,11 +1206,13 @@ impl Position {
 
                             if rook_check_bb
                                 & self.piece_bb[PieceType::ROOK
-                                    .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                    .get_piece(self.side_to_move.get_op_color())
+                                    .as_usize()]
                                 != 0
                                 || rook_check_bb
                                     & self.piece_bb[PieceType::ROOK_X
-                                        .get_piece(self.side_to_move.get_op_color()).as_usize()]
+                                        .get_piece(self.side_to_move.get_op_color())
+                                        .as_usize()]
                                     != 0
                             {
                                 return false;
@@ -1909,7 +1942,7 @@ fn count_nodes(position: &mut Position, limit: u8) -> u64 {
     for m in &moves {
         position.do_move(m);
 
-        count += count_nodes(position, limit  - 1);
+        count += count_nodes(position, limit - 1);
 
         position.undo_move();
     }

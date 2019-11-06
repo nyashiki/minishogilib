@@ -43,7 +43,8 @@ impl Reservoir {
         self.learning_targets.push_back(record.learning_target_plys);
 
         if log {
-            let mut file = OpenOptions::new().create(true).append(true).open(&self.json_path).unwrap();
+            let mut file =
+                OpenOptions::new().create(true).append(true).open(&self.json_path).unwrap();
             file.write(record_json.as_bytes()).unwrap();
             file.write(b"\n").unwrap();
         }
@@ -62,7 +63,11 @@ impl Reservoir {
         }
     }
 
-    pub fn sample(&self, py: Python, mini_batch_size: usize) -> (Py<PyArray1<f32>>, Py<PyArray1<f32>>, Py<PyArray1<f32>>) {
+    pub fn sample(
+        &self,
+        py: Python,
+        mini_batch_size: usize,
+    ) -> (Py<PyArray1<f32>>, Py<PyArray1<f32>>, Py<PyArray1<f32>>) {
         let mut cumulative_plys = vec![0; self.max_size + 1];
 
         for i in 0..self.max_size {
@@ -81,7 +86,9 @@ impl Reservoir {
         let mut black_win_target_count = 0;
         let mut counter = 0;
 
-        while white_win_target_count < white_win_target_count_max || black_win_target_count < black_win_target_count_max {
+        while white_win_target_count < white_win_target_count_max
+            || black_win_target_count < black_win_target_count_max
+        {
             let mut ok = 0;
             let mut ng = self.max_size + 1;
 
@@ -118,46 +125,49 @@ impl Reservoir {
             counter += 1;
         }
 
-        let data: std::vec::Vec<_> = targets.par_iter().map(move |&target| {
-            let index = target.0;
-            let ply = target.1;
+        let data: std::vec::Vec<_> = targets
+            .par_iter()
+            .map(move |&target| {
+                let index = target.0;
+                let ply = target.1;
 
-            let mut position = Position::empty_board();
-            position.set_start_position();
+                let mut position = Position::empty_board();
+                position.set_start_position();
 
-            for (i, m) in self.records[index].sfen_kif.iter().enumerate() {
-                if i == ply {
-                    break;
+                for (i, m) in self.records[index].sfen_kif.iter().enumerate() {
+                    if i == ply {
+                        break;
+                    }
+
+                    let m = position.sfen_to_move(m);
+                    position.do_move(&m);
                 }
 
-                let m = position.sfen_to_move(m);
-                position.do_move(&m);
-            }
+                let nninput = position.to_alphazero_input_array();
 
-            let nninput = position.to_alphazero_input_array();
+                let mut policy = [0f32; 69 * 5 * 5];
+                // Policy.
+                let (sum_n, _q, playouts) = &self.records[index].mcts_result[ply];
 
-            let mut policy = [0f32; 69 * 5 * 5];
-            // Policy.
-            let (sum_n, _q, playouts) = &self.records[index].mcts_result[ply];
+                for playout in playouts {
+                    let m = position.sfen_to_move(&playout.0);
+                    let n = playout.1;
 
-            for playout in playouts {
-                let m = position.sfen_to_move(&playout.0);
-                let n = playout.1;
+                    policy[m.to_policy_index()] = n as f32 / *sum_n as f32;
+                }
 
-                policy[m.to_policy_index()] = n as f32 / *sum_n as f32;
-            }
+                // Value.
+                let value = if self.records[index].winner == 2 {
+                    0.0
+                } else if self.records[index].winner == position.get_side_to_move() {
+                    1.0
+                } else {
+                    -1.0
+                };
 
-            // Value.
-            let value = if self.records[index].winner == 2 {
-                0.0
-            } else if self.records[index].winner == position.get_side_to_move() {
-                1.0
-            } else {
-                -1.0
-            };
-
-            (nninput, policy, value)
-        }).collect();
+                (nninput, policy, value)
+            })
+            .collect();
 
         let mut ins = std::vec::Vec::with_capacity(mini_batch_size * (8 * 33 + 2) * 5 * 5);
         let mut policies = std::vec::Vec::with_capacity(mini_batch_size * 69 * 5 * 5);
@@ -169,8 +179,10 @@ impl Reservoir {
             values.push(batch.2);
         }
 
-        (PyArray1::from_slice(py, &ins).to_owned(),
-         PyArray1::from_slice(py, &policies).to_owned(),
-         PyArray1::from_slice(py, &values).to_owned())
+        (
+            PyArray1::from_slice(py, &ins).to_owned(),
+            PyArray1::from_slice(py, &policies).to_owned(),
+            PyArray1::from_slice(py, &values).to_owned(),
+        )
     }
 }

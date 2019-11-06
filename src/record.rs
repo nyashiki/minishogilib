@@ -10,7 +10,7 @@ pub struct Record {
     pub mcts_result: std::vec::Vec<(u32, f32, std::vec::Vec<(String, u32)>)>,
     pub learning_target_plys: std::vec::Vec<usize>,
     pub winner: u8,
-    pub timestamp: u32
+    pub timestamp: u32,
 }
 
 impl Record {
