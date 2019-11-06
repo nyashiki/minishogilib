@@ -129,7 +129,7 @@ fn checkmate_test() {
     }
 
     {
-        position.set_sfen("5/5/2k2/5/2K2 b 3G 1");
+        position.set_sfen("5/5/2k2/5/2K2 b 2GS 1");
 
         let start = std::time::Instant::now();
         let (checkmate, checkmate_move) = position.solve_checkmate_dfs(7);
