@@ -14,7 +14,7 @@ pub struct Position {
     pub hand: [[u8; 5]; 2],
     pub ply: u16,
     pub kif: [Move; MAX_PLY + 1],
-    pub hash: [u64; MAX_PLY + 1],
+    pub hash: [(u64, u64); MAX_PLY + 1],
 
     pub pawn_flags: [u8; 2],
     pub piece_bb: [Bitboard; Piece::B_PAWN_X.as_usize() + 1],
@@ -97,7 +97,11 @@ impl Position {
 
         println!("ply: {}", self.ply);
 
-        println!("hash: {:x}", self.get_hash());
+        {
+            let hash = self.get_hash();
+            println!("hash: ({:x}, {:x})", hash.0, hash.1);
+        }
+
         println!("repetition: {}", self.get_repetition());
     }
 
@@ -341,7 +345,9 @@ impl Position {
             }
 
             // hash値の更新
-            self.hash[self.ply as usize + 1] ^= ::zobrist::BOARD_TABLE[m.to][m.piece.as_usize()];
+            self.hash[self.ply as usize + 1].0 ^= ::zobrist::BOARD_TABLE[m.to][m.piece.as_usize()];
+            self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2][self.hand[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2] as usize + 1];
+            self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2][self.hand[self.side_to_move.as_usize()][m.piece.get_piece_type().as_usize() - 2] as usize];
         } else {
             // 盤上の駒を動かす場合
 
@@ -359,8 +365,10 @@ impl Position {
                 }
 
                 // hashの更新
-                self.hash[self.ply as usize + 1] ^=
+                self.hash[self.ply as usize + 1].0 ^=
                     ::zobrist::BOARD_TABLE[m.to][m.capture_piece.as_usize()];
+                self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE[self.side_to_move.as_usize()][m.capture_piece.get_piece_type().get_raw().as_usize() - 2][self.hand[self.side_to_move.as_usize()][m.capture_piece.get_piece_type().get_raw().as_usize() - 2] as usize - 1];
+                self.hash[self.ply as usize + 1].1 ^= ::zobrist::HAND_TABLE[self.side_to_move.as_usize()][m.capture_piece.get_piece_type().get_raw().as_usize() - 2][self.hand[self.side_to_move.as_usize()][m.capture_piece.get_piece_type().get_raw().as_usize() - 2] as usize];
             }
 
             if m.promotion {
@@ -385,12 +393,12 @@ impl Position {
             self.player_bb[self.side_to_move.as_usize()] ^= 1 << m.from;
 
             // hash値の更新
-            self.hash[self.ply as usize + 1] ^= ::zobrist::BOARD_TABLE[m.from][m.piece.as_usize()];
-            self.hash[self.ply as usize + 1] ^=
+            self.hash[self.ply as usize + 1].0 ^= ::zobrist::BOARD_TABLE[m.from][m.piece.as_usize()];
+            self.hash[self.ply as usize + 1].0 ^=
                 ::zobrist::BOARD_TABLE[m.to][self.board[m.to].as_usize()];
         }
 
-        self.hash[self.ply as usize + 1] ^= 1; // 手番bitの反転
+        self.hash[self.ply as usize + 1].0 ^= 1; // 手番bitの反転
 
         // 棋譜に登録
         self.kif[self.ply as usize] = *m;
@@ -614,13 +622,6 @@ impl Position {
     }
 }
 
-#[test]
-fn to_svg_test() {
-    let mut position = Position::empty_board();
-    position.set_start_position();
-    println!("{}", position.to_svg());
-}
-
 impl Position {
     pub fn empty_board() -> Position {
         Position {
@@ -632,7 +633,7 @@ impl Position {
             player_bb: [0; 2],
             ply: 0,
             kif: [NULL_MOVE; MAX_PLY + 1],
-            hash: [0; MAX_PLY + 1],
+            hash: [(0, 0); MAX_PLY + 1],
             adjacent_check_bb: [0; MAX_PLY + 1],
             long_check_bb: [0; MAX_PLY + 1],
             sequent_check_count: [[0; 2]; MAX_PLY + 1],
@@ -694,7 +695,7 @@ impl Position {
             & self.piece_bb[PieceType::ROOK_X.get_piece(self.side_to_move.get_op_color()).as_usize()];
     }
 
-    fn calculate_hash(&self) -> u64 {
+    fn calculate_hash(&self) -> (u64, u64) {
         let mut hash: u64 = 0;
 
         for i in 0..SQUARE_NB {
@@ -707,10 +708,18 @@ impl Position {
             hash |= 1;
         }
 
-        return hash;
+        let mut hand_hash: u64 = 0;
+
+        for i in 0..2 {
+            for j in 0..5 {
+                hand_hash ^= ::zobrist::HAND_TABLE[i][j][self.hand[i][j] as usize];
+            }
+        }
+
+        return (hash, hand_hash);
     }
 
-    fn get_hash(&self) -> u64 {
+    fn get_hash(&self) -> (u64, u64) {
         return self.hash[self.ply as usize];
     }
 
@@ -1687,7 +1696,7 @@ fn hash_test() {
             assert_eq!(position.get_hash(), position.calculate_hash());
 
             // 手番bitと手番が一致することを確認する
-            assert_eq!(position.side_to_move == Color::BLACK, position.get_hash() & 1 != 0);
+            assert_eq!(position.side_to_move == Color::BLACK, position.get_hash().0 & 1 != 0);
 
             let random_move = moves.choose(&mut rng).unwrap();
             position.do_move(random_move);
