@@ -1746,6 +1746,7 @@ fn is_repetition_test() {
 
     static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
     static REPETITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a";
+    static REPETITION_SFEN2: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 3e2d 3a4b 2e3d 2a2b 4e4d 4a3b 5e4e 5a4a 3d5b 4a5a 5b3d 5a4a 3d5b 4a5a 5b2e 5a4a 2e5b 4a5a 5b3d 5a4a 3d5b";
     static CHECK_REPETITION_SFEN: &str = "2k2/5/5/5/2K2 b R 1 moves R*3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c";
     static NOT_REPETITION_SFEN: &str =
         "rbsgk/4p/5/P4/KGSBR b - 1 moves 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a";
@@ -1756,6 +1757,10 @@ fn is_repetition_test() {
     assert_eq!(position.is_repetition(), (false, false));
 
     position.set_sfen(REPETITION_SFEN);
+    assert_eq!(position.is_repetition(), (true, false));
+
+    position.set_sfen(REPETITION_SFEN2);
+    position.print();
     assert_eq!(position.is_repetition(), (true, false));
 
     position.set_sfen(CHECK_REPETITION_SFEN);
