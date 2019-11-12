@@ -265,10 +265,10 @@ impl MCTS {
 
         let num_threads = nodes.len();  // ToDo: use native threads num.
 
-        let nodes = Arc::new(nodes);
-        let positions = Arc::new(positions);
-        let policies = Arc::new(policies);
-        let values = Arc::new(values);
+        let nodes = Arc::new(&nodes);
+        let positions = Arc::new(&positions);
+        let policies = Arc::new(&policies);
+        let values = Arc::new(&values);
         let node_index = Arc::new(Mutex::new(&mut self.node_index));
         let node_used_count = Arc::new(Mutex::new(&mut self.node_used_count));
         let game_tree = Arc::new(&self.game_tree);
@@ -298,10 +298,12 @@ impl MCTS {
                     let mut policy_max: f32 = std::f32::MIN;
                     let moves = position.generate_moves();
 
-                    c_mutex.lock();
+                    {
+                        let lock = c_mutex.lock().unwrap();
 
-                    if game_tree[node].n > 0 {
-                        return;
+                        if game_tree[node].n > 0 {
+                            return;
+                        }
                     }
 
                     for m in &moves {
@@ -317,6 +319,8 @@ impl MCTS {
                     let (is_repetition, is_check_repetition) = position.is_repetition();
 
                     if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
+                        let lock = c_mutex.lock().unwrap();
+
                         let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
                         (*p).is_terminal = true;
 
@@ -340,6 +344,8 @@ impl MCTS {
                         }
                     } else {
                         // Set policy.
+                        let lock = c_mutex.lock().unwrap();
+
                         if !game_tree[node].is_terminal {
                             for m in &moves {
                                 let policy_index = m.to_policy_index();
