@@ -12,11 +12,12 @@ version = "0.8.1"
 features = ["extension-module"]
 
 [dependencies]
-rand = "0.6"
-lazy_static = "0.2.1"
 bitintr = "0.3.0"
+crossbeam = "0.7"
+lazy_static = "0.2.1"
 ndarray = "0.12.1"
 numpy = "0.7.0"
+rand = "0.6"
 rayon = "1.2.0"
 serde = "1.0.101"
 serde_json = "1.0.41"

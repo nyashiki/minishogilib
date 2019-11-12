@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate lazy_static;
+extern crate crossbeam;
 extern crate bitintr;
 extern crate numpy;
 extern crate pyo3;

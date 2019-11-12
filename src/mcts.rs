@@ -251,7 +251,7 @@ impl MCTS {
         return node;
     }
 
-    pub fn evaluate(
+    pub fn evaluate<'a>(
         &mut self,
         nodes: std::vec::Vec<usize>,
         positions: std::vec::Vec<&Position>,
@@ -268,98 +268,116 @@ impl MCTS {
         let positions = Arc::new(positions);
         let policies = Arc::new(policies);
         let values = Arc::new(values);
+        let node_index = Arc::new(Mutex::new(self.node_index));
+        let node_used_count = Arc::new(Mutex::new(self.node_used_count));
+        let game_tree = Arc::new(&self.game_tree);
 
-        let mut workers = std::vec::Vec::new();
+        crossbeam::scope(|scope| {
+            let mut workers = std::vec::Vec::new();
 
-        for thread_id in 0..num_threads {
-            let nodes = nodes.clone();
-            let positions = positions.clone();
-            let policies = policies.clone();
-            let values = values.clone();
+            for thread_id in 0..num_threads {
+                let nodes = nodes.clone();
+                let positions = positions.clone();
+                let policies = policies.clone();
+                let values = values.clone();
+                let node_index = node_index.clone();
+                let node_used_count = node_used_count.clone();
+                let game_tree = game_tree.clone();
+                let size = self.size;
 
-            let worker = thread::spawn(move || unsafe {
-                let node = nodes[thread_id];
-                let position = positions[thread_id];
-                let policy = policies;
-                let value = values[thread_id];
+                let worker = scope.spawn(move |_| unsafe {
+                    let node = nodes[thread_id];
+                    let position = positions[thread_id];
+                    let policy = policies;
+                    let mut value = values[thread_id];
 
-                let mut legal_policy_sum: f32 = 0.0;
-                let mut policy_max: f32 = std::f32::MIN;
-                let moves = position.generate_moves();
+                    let mut legal_policy_sum: f32 = 0.0;
+                    let mut policy_max: f32 = std::f32::MIN;
+                    let moves = position.generate_moves();
 
-                for m in &moves {
-                    if policy[m.to_policy_index()] > policy_max {
-                        policy_max = policy[m.to_policy_index()];
-                    }
-                }
-
-                for m in &moves {
-                    legal_policy_sum += (policy[m.to_policy_index()] - policy_max).exp();
-                }
-
-                let (is_repetition, is_check_repetition) = position.is_repetition();
-
-                if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
-                    self.game_tree[node].is_terminal = true;
-                }
-
-                // Win or lose is determined by the game rule.
-                if self.game_tree[node].is_terminal {
-                    if is_check_repetition {
-                        value = 1.0;
-                    } else if is_repetition {
-                        value = if position.side_to_move == Color::WHITE { 0.0 } else { 1.0 }
-                    } else if position.ply == MAX_PLY as u16 {
-                        value = 0.5;
-                    } else {
-                        value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
-                            == PieceType::PAWN
-                        {
-                            // 打ち歩詰め
-                            1.0
-                        } else {
-                            // 詰み
-                            0.0
-                        };
-                    }
-                }
-
-                // Set policy.
-                if !self.game_tree[node].is_terminal {
                     for m in &moves {
-                        let policy_index = m.to_policy_index();
-
-                        let mut index = self.node_index;
-                        loop {
-                            if index == 0 {
-                                index = 1;
-                            }
-
-                            if !self.game_tree[index].is_used {
-                                let p = (policy[policy_index] - policy_max).exp() / legal_policy_sum;
-
-                                self.game_tree[index] = Node::new(node, *m, p, true);
-                                self.game_tree[node].children.push(index);
-                                self.node_index = (index + 1) % self.size;
-                                self.node_used_count += 1;
-
-                                break;
-                            }
-                            index = (index + 1) % self.size;
+                        if policy[m.to_policy_index()] > policy_max {
+                            policy_max = policy[m.to_policy_index()];
                         }
                     }
-                }
 
-                // Set value.
-                self.game_tree[node].v = value;
-            });
+                    for m in &moves {
+                        legal_policy_sum += (policy[m.to_policy_index()] - policy_max).exp();
+                    }
 
-            workers.push(worker);
-        }
+                    let (is_repetition, is_check_repetition) = position.is_repetition();
 
-        for worker in workers {
-            worker.join().unwrap();
-        }
+                    if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
+                        let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
+                        (*p).is_terminal = true;
+                    }
+
+                    // Win or lose is determined by the game rule.
+                    if game_tree[node].is_terminal {
+                        if is_check_repetition {
+                            value = 1.0;
+                        } else if is_repetition {
+                            value = if position.side_to_move == Color::WHITE { 0.0 } else { 1.0 }
+                        } else if position.ply == MAX_PLY as u16 {
+                            value = 0.5;
+                        } else {
+                            value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
+                                == PieceType::PAWN
+                            {
+                                // 打ち歩詰め
+                                1.0
+                            } else {
+                                // 詰み
+                                0.0
+                            };
+                        }
+                    }
+
+                    // Set policy.
+                    if !game_tree[node].is_terminal {
+                        for m in &moves {
+                            let policy_index = m.to_policy_index();
+
+                            let mut index = node_index.lock().unwrap();
+                            loop {
+                                if *index == 0 {
+                                    *index = 1;
+                                }
+
+                                if !game_tree[*index].is_used {
+                                    let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
+                                    let policy = (policy[policy_index] - policy_max).exp() / legal_policy_sum;
+
+                                    *p = Node::new(node, *m, policy, true);
+                                    (*p).children.push(*index);
+
+                                    let mut node_index = node_index.lock().unwrap();
+                                    *node_index = (*index + 1) % size;
+
+                                    let mut node_used_count = node_used_count.lock().unwrap();
+                                    *node_used_count += 1;
+
+                                    break;
+                                }
+                                *index = (*index + 1) % size;
+                            }
+                        }
+                    }
+
+                    // Set value.
+                    {
+                        let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
+                        (*p).v = value;
+                    }
+                });
+
+                workers.push(worker);
+            }
+
+            for worker in workers {
+                worker.join().unwrap();
+            }
+        });
     }
 
     pub fn add_noise(&mut self, node: usize) {
