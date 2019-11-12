@@ -6,7 +6,9 @@ use numpy::{PyArray1, PyArray2};
 use pyo3::prelude::*;
 use rand::distributions::Distribution;
 use rand::Rng;
-use rayon::prelude::*;
+use std::sync::{Arc, Mutex};
+use std::thread;
+
 
 #[derive(Clone)]
 pub struct Node {
@@ -253,86 +255,111 @@ impl MCTS {
         &mut self,
         nodes: std::vec::Vec<usize>,
         positions: std::vec::Vec<&Position>,
-        np_policies: &PyArray2<f32>,
-        mut np_values: &PyArray1<f32>,
+        np_policies: &PyArray1<f32>,
+        np_values: &PyArray1<f32>,
     ) {
-        let policies = np_policies.reshape([nodes.len(), 1725]).unwrap().as_slice();
-        let values = np_values.as_slice();
+        // let policies = np_policies.reshape([nodes.len() * 1725]).unwrap().as_array();
+        let policies = np_policies.as_array();
+        let values = np_values.as_array();
 
-        // Rayon will support izip!()
-        let iter = nodes.par_iter().zip(positions.par_iter().zip(policies.par_iter().zip(values.par_iter())));
+        let num_threads = nodes.len();  // ToDo: use native threads num.
 
-        iter.map(|(node, (position, (policy, value)))| {
-            let mut legal_policy_sum: f32 = 0.0;
-            let mut policy_max: f32 = std::f32::MIN;
-            let moves = position.generate_moves();
+        let nodes = Arc::new(nodes);
+        let positions = Arc::new(positions);
+        let policies = Arc::new(policies);
+        let values = Arc::new(values);
 
-            for m in &moves {
-                if policy[m.to_policy_index()] > policy_max {
-                    policy_max = policy[m.to_policy_index()];
-                }
-            }
+        let mut workers = std::vec::Vec::new();
 
-            for m in &moves {
-                legal_policy_sum += (policy[m.to_policy_index()] - policy_max).exp();
-            }
+        for thread_id in 0..num_threads {
+            let nodes = nodes.clone();
+            let positions = positions.clone();
+            let policies = policies.clone();
+            let values = values.clone();
 
-            let (is_repetition, is_check_repetition) = position.is_repetition();
+            let worker = thread::spawn(move || unsafe {
+                let node = nodes[thread_id];
+                let position = positions[thread_id];
+                let policy = policies;
+                let value = values[thread_id];
 
-            if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
-                self.game_tree[*node].is_terminal = true;
-            }
+                let mut legal_policy_sum: f32 = 0.0;
+                let mut policy_max: f32 = std::f32::MIN;
+                let moves = position.generate_moves();
 
-            // win or lose is determined by the game rule
-            let mut value = *value;
-            if self.game_tree[*node].is_terminal {
-                if is_check_repetition {
-                    value = 1.0;
-                } else if is_repetition {
-                    value = if position.side_to_move == Color::WHITE { 0.0 } else { 1.0 }
-                } else if position.ply == MAX_PLY as u16 {
-                    value = 0.5;
-                } else {
-                    value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
-                        == PieceType::PAWN
-                    {
-                        // 打ち歩詰め
-                        1.0
-                    } else {
-                        // 詰み
-                        0.0
-                    };
-                }
-            }
-
-            // set policy and vaue
-            if !self.game_tree[*node].is_terminal {
                 for m in &moves {
-                    let policy_index = m.to_policy_index();
-
-                    let mut index = self.node_index;
-                    loop {
-                        if index == 0 {
-                            index = 1;
-                        }
-
-                        if !self.game_tree[index].is_used {
-                            let p = (policy[policy_index] - policy_max).exp() / legal_policy_sum;
-
-                            self.game_tree[index] = Node::new(*node, *m, p, true);
-                            self.game_tree[*node].children.push(index);
-                            self.node_index = (index + 1) % self.size;
-                            self.node_used_count += 1;
-
-                            break;
-                        }
-                        index = (index + 1) % self.size;
+                    if policy[m.to_policy_index()] > policy_max {
+                        policy_max = policy[m.to_policy_index()];
                     }
                 }
-            }
 
-            self.game_tree[*node].v = value;
-        });
+                for m in &moves {
+                    legal_policy_sum += (policy[m.to_policy_index()] - policy_max).exp();
+                }
+
+                let (is_repetition, is_check_repetition) = position.is_repetition();
+
+                if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
+                    self.game_tree[node].is_terminal = true;
+                }
+
+                // Win or lose is determined by the game rule.
+                if self.game_tree[node].is_terminal {
+                    if is_check_repetition {
+                        value = 1.0;
+                    } else if is_repetition {
+                        value = if position.side_to_move == Color::WHITE { 0.0 } else { 1.0 }
+                    } else if position.ply == MAX_PLY as u16 {
+                        value = 0.5;
+                    } else {
+                        value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
+                            == PieceType::PAWN
+                        {
+                            // 打ち歩詰め
+                            1.0
+                        } else {
+                            // 詰み
+                            0.0
+                        };
+                    }
+                }
+
+                // Set policy.
+                if !self.game_tree[node].is_terminal {
+                    for m in &moves {
+                        let policy_index = m.to_policy_index();
+
+                        let mut index = self.node_index;
+                        loop {
+                            if index == 0 {
+                                index = 1;
+                            }
+
+                            if !self.game_tree[index].is_used {
+                                let p = (policy[policy_index] - policy_max).exp() / legal_policy_sum;
+
+                                self.game_tree[index] = Node::new(node, *m, p, true);
+                                self.game_tree[node].children.push(index);
+                                self.node_index = (index + 1) % self.size;
+                                self.node_used_count += 1;
+
+                                break;
+                            }
+                            index = (index + 1) % self.size;
+                        }
+                    }
+                }
+
+                // Set value.
+                self.game_tree[node].v = value;
+            });
+
+            workers.push(worker);
+        }
+
+        for worker in workers {
+            worker.join().unwrap();
+        }
     }
 
     pub fn add_noise(&mut self, node: usize) {
