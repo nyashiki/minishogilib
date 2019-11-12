@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Node {
     pub n: u32,
     pub v: f32,
@@ -91,6 +91,7 @@ impl Node {
 }
 
 #[pyclass]
+#[derive(Debug)]
 pub struct MCTS {
     pub size: usize,
     pub game_tree: std::vec::Vec<Node>,
@@ -251,18 +252,20 @@ impl MCTS {
         return node;
     }
 
-    pub fn evaluate<'a>(
+    pub fn evaluate(
         &mut self,
         nodes: std::vec::Vec<usize>,
         positions: std::vec::Vec<&Position>,
-        np_policies: &PyArray1<f32>,
+        np_policies: &PyArray2<f32>,
         np_values: &PyArray1<f32>,
     ) {
-        // let policies = np_policies.reshape([nodes.len() * 1725]).unwrap().as_array();
-        let policies = np_policies.as_array();
+        let policies = np_policies.reshape([nodes.len() * 1725]).unwrap().as_array();
+        // let policies = np_policies.as_array();
         let values = np_values.as_array();
 
         let num_threads = nodes.len();  // ToDo: use native threads num.
+
+        println!("num_threads: {}", num_threads);
 
         let nodes = Arc::new(nodes);
         let positions = Arc::new(positions);
@@ -271,6 +274,7 @@ impl MCTS {
         let node_index = Arc::new(Mutex::new(self.node_index));
         let node_used_count = Arc::new(Mutex::new(self.node_used_count));
         let game_tree = Arc::new(&self.game_tree);
+        let size = self.size;
 
         crossbeam::scope(|scope| {
             let mut workers = std::vec::Vec::new();
@@ -283,26 +287,28 @@ impl MCTS {
                 let node_index = node_index.clone();
                 let node_used_count = node_used_count.clone();
                 let game_tree = game_tree.clone();
-                let size = self.size;
 
                 let worker = scope.spawn(move |_| unsafe {
                     let node = nodes[thread_id];
                     let position = positions[thread_id];
-                    let policy = policies;
                     let mut value = values[thread_id];
+
+                    position.print();
 
                     let mut legal_policy_sum: f32 = 0.0;
                     let mut policy_max: f32 = std::f32::MIN;
                     let moves = position.generate_moves();
 
+                    println!("moves: {:?}", moves);
+
                     for m in &moves {
-                        if policy[m.to_policy_index()] > policy_max {
-                            policy_max = policy[m.to_policy_index()];
+                        if policies[1725 * thread_id + m.to_policy_index()] > policy_max {
+                            policy_max = policies[1725 * thread_id + m.to_policy_index()];
                         }
                     }
 
                     for m in &moves {
-                        legal_policy_sum += (policy[m.to_policy_index()] - policy_max).exp();
+                        legal_policy_sum += (policies[1725 * thread_id + m.to_policy_index()] - policy_max).exp();
                     }
 
                     let (is_repetition, is_check_repetition) = position.is_repetition();
@@ -338,28 +344,34 @@ impl MCTS {
                         for m in &moves {
                             let policy_index = m.to_policy_index();
 
-                            let mut index = node_index.lock().unwrap();
+                            let mut index: usize = *node_index.lock().unwrap();
                             loop {
-                                if *index == 0 {
-                                    *index = 1;
+                                if index == 0 {
+                                    index = 1;
                                 }
 
-                                if !game_tree[*index].is_used {
-                                    let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
-                                    let policy = (policy[policy_index] - policy_max).exp() / legal_policy_sum;
+                                if !game_tree[index].is_used {
+                                    let policy = (policies[1725 * thread_id + policy_index] - policy_max).exp() / legal_policy_sum;
 
-                                    *p = Node::new(node, *m, policy, true);
-                                    (*p).children.push(*index);
+                                    {
+                                        let p = (game_tree.as_ptr() as *mut Node).offset(index as isize);
+                                        *p = Node::new(node, *m, policy, true);
+                                    }
+
+                                    {
+                                        let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
+                                        (*p).children.push(index);
+                                    }
 
                                     let mut node_index = node_index.lock().unwrap();
-                                    *node_index = (*index + 1) % size;
+                                    *node_index = (index + 1) % size;
 
                                     let mut node_used_count = node_used_count.lock().unwrap();
                                     *node_used_count += 1;
 
                                     break;
                                 }
-                                *index = (*index + 1) % size;
+                                index = (index + 1) % size;
                             }
                         }
                     }
@@ -403,9 +415,10 @@ impl MCTS {
         }
     }
 
-    pub fn backpropagate(&mut self, leaf_node: usize, value: f32) {
+    pub fn backpropagate(&mut self, leaf_node: usize) {
         let mut node = leaf_node;
         let mut flip = false;
+        let value = self.game_tree[leaf_node].v;
 
         while node != 0 {
             self.game_tree[node].w += if !flip { value } else { 1.0 - value };
