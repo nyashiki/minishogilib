@@ -103,6 +103,12 @@ impl Position {
         }
 
         println!("repetition: {}", self.get_repetition());
+
+        print!("sfen: ");
+        for i in 0..self.ply as usize {
+            print!("{} ", self.kif[i].sfen());
+        }
+        println!("");
     }
 
     pub fn sfen(&self, history: bool) -> String {

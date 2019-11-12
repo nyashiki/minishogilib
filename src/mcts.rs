@@ -276,6 +276,8 @@ impl MCTS {
         let game_tree = Arc::new(&self.game_tree);
         let size = self.size;
 
+        let mutex = Arc::new(Mutex::new(0));
+
         crossbeam::scope(|scope| {
             let mut workers = std::vec::Vec::new();
 
@@ -287,19 +289,22 @@ impl MCTS {
                 let node_index = node_index.clone();
                 let node_used_count = node_used_count.clone();
                 let game_tree = game_tree.clone();
+                let c_mutex = mutex.clone();
 
                 let worker = scope.spawn(move |_| unsafe {
                     let node = nodes[thread_id];
                     let position = positions[thread_id];
                     let mut value = values[thread_id];
 
-                    position.print();
-
                     let mut legal_policy_sum: f32 = 0.0;
                     let mut policy_max: f32 = std::f32::MIN;
                     let moves = position.generate_moves();
 
-                    println!("moves: {:?}", moves);
+                    c_mutex.lock();
+
+                    if game_tree[node].n > 0 {
+                        return;
+                    }
 
                     for m in &moves {
                         if policies[1725 * thread_id + m.to_policy_index()] > policy_max {
@@ -316,10 +321,8 @@ impl MCTS {
                     if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
                         let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
                         (*p).is_terminal = true;
-                    }
 
-                    // Win or lose is determined by the game rule.
-                    if game_tree[node].is_terminal {
+                        // Win or lose is determined by the game rule.
                         if is_check_repetition {
                             value = 1.0;
                         } else if is_repetition {
@@ -337,49 +340,48 @@ impl MCTS {
                                 0.0
                             };
                         }
-                    }
+                    } else {
+                        // Set policy.
+                        if !game_tree[node].is_terminal {
+                            for m in &moves {
+                                let policy_index = m.to_policy_index();
+                                let policy = (policies[1725 * thread_id + policy_index] - policy_max).exp() / legal_policy_sum;
 
-                    // Set policy.
-                    if !game_tree[node].is_terminal {
-                        for m in &moves {
-                            let policy_index = m.to_policy_index();
-
-                            let mut index: usize = *node_index.lock().unwrap();
-                            loop {
-                                if index == 0 {
-                                    index = 1;
-                                }
-
-                                if !game_tree[index].is_used {
-                                    let policy = (policies[1725 * thread_id + policy_index] - policy_max).exp() / legal_policy_sum;
-
-                                    {
-                                        let p = (game_tree.as_ptr() as *mut Node).offset(index as isize);
-                                        *p = Node::new(node, *m, policy, true);
+                                let mut index: usize = *node_index.lock().unwrap();
+                                loop {
+                                    if index == 0 {
+                                        index = 1;
                                     }
 
-                                    {
-                                        let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
-                                        (*p).children.push(index);
+                                    if !game_tree[index].is_used {
+                                        {
+                                            let p = (game_tree.as_ptr() as *mut Node).offset(index as isize);
+                                            *p = Node::new(node, *m, policy, true);
+                                        }
+
+                                        {
+                                            let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
+                                            (*p).children.push(index);
+                                        }
+
+                                        let mut node_index = node_index.lock().unwrap();
+                                        *node_index = (index + 1) % size;
+
+                                        let mut node_used_count = node_used_count.lock().unwrap();
+                                        *node_used_count += 1;
+
+                                        break;
                                     }
-
-                                    let mut node_index = node_index.lock().unwrap();
-                                    *node_index = (index + 1) % size;
-
-                                    let mut node_used_count = node_used_count.lock().unwrap();
-                                    *node_used_count += 1;
-
-                                    break;
+                                    index = (index + 1) % size;
                                 }
-                                index = (index + 1) % size;
                             }
                         }
-                    }
 
-                    // Set value.
-                    {
-                        let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
-                        (*p).v = value;
+                        // Set value.
+                        {
+                            let p = (game_tree.as_ptr() as *mut Node).offset(node as isize);
+                            (*p).v = value;
+                        }
                     }
                 });
 

@@ -44,6 +44,7 @@ impl Position {
 
         for h in 0..HISTORY {
             if h > 0 {
+                position.print();
                 // 局面を1手戻す
                 position.undo_move();
             }
