@@ -158,6 +158,10 @@ impl MCTS {
         return 1;
     }
 
+    pub fn expanded(&self, node: usize) -> bool {
+        return self.game_tree[node].is_terminal || self.game_tree[node].expanded();
+    }
+
     pub fn best_move(&self, node: usize) -> Move {
         let best_child: usize = self.select_n_max_child(node);
 
@@ -256,9 +260,9 @@ impl MCTS {
         position: &Position,
         np_policy: &PyArray1<f32>,
         mut value: f32,
-    ) -> f32 {
+    ) {
         if self.game_tree[node].n > 0 {
-            return self.game_tree[node].v;
+            return;
         }
 
         let policy = np_policy.as_array();
@@ -330,8 +334,6 @@ impl MCTS {
         }
 
         self.game_tree[node].v = value;
-
-        return value;
     }
 
     pub fn add_noise(&mut self, node: usize) {
@@ -357,9 +359,10 @@ impl MCTS {
         }
     }
 
-    pub fn backpropagate(&mut self, leaf_node: usize, value: f32) {
+    pub fn backpropagate(&mut self, leaf_node: usize) {
         let mut node = leaf_node;
         let mut flip = false;
+        let value = self.game_tree[node].v;
 
         while node != 0 {
             self.game_tree[node].w += if !flip { value } else { 1.0 - value };
