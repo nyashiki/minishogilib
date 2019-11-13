@@ -52,9 +52,6 @@ impl Node {
     }
 
     pub fn get_puct(&self, parent_n: f32, forced_playouts: bool) -> f32 {
-        const C_BASE: f32 = 19652.0;
-        const C_INIT: f32 = 1.25;
-
         if self.is_terminal {
             if self.v == 0.0 {
                 return std::f32::MAX;
@@ -71,15 +68,20 @@ impl Node {
             }
         }
 
-        let c: f32 = ((1.0 + (self.n as f32) + C_BASE) / C_BASE).log2() + C_INIT;
+        // const C_BASE: f32 = 19652.0;
+        // const C_INIT: f32 = 1.25;
+
+        // let c: f32 = ((1.0 + (self.n as f32) + C_BASE) / C_BASE).log2() + C_INIT;
+        let c: f32 = 1.5;
+
         let q: f32 = if self.n as f32 + self.virtual_loss == 0.0 {
             0.0
         } else {
             1.0 - (self.w + self.virtual_loss) / (self.n as f32 + self.virtual_loss)
         };
-        let u: f32 = c * self.p * parent_n.sqrt() / (1.0 + (self.n as f32) + self.virtual_loss);
+        let u: f32 = self.p * parent_n.sqrt() / (1.0 + (self.n as f32) + self.virtual_loss);
 
-        return q + u;
+        return q + c * u;
     }
 
     pub fn expanded(&self) -> bool {
