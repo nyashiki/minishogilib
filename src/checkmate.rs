@@ -29,7 +29,7 @@ fn attack(position: &mut Position, depth: i32) -> (bool, Move) {
         return (false, NULL_MOVE);
     }
 
-    let moves = position.generate_moves(); // ToDo: 王手生成ルーチン
+    let moves = position.generate_moves_with_option(true, true, false, true);
 
     for m in &moves {
         position.do_move(m);
@@ -195,6 +195,36 @@ fn checkmate_test() {
     {
         position.set_sfen("4k/5/4B/5/2K1R b - 1");
 
+        let start = std::time::Instant::now();
+        let (checkmate, checkmate_move) = position.solve_checkmate_dfs(7);
+        let elapsed = start.elapsed();
+
+        assert_eq!(checkmate, true);
+        println!(
+            "{} ... {}.{} sec.",
+            checkmate_move.sfen(),
+            elapsed.as_secs(),
+            elapsed.subsec_nanos() / 1000000
+        );
+    }
+
+    {
+        position.set_sfen("4k/4p/5/5/K4 b BG 1");
+        let start = std::time::Instant::now();
+        let (checkmate, checkmate_move) = position.solve_checkmate_dfs(7);
+        let elapsed = start.elapsed();
+
+        assert_eq!(checkmate, true);
+        println!(
+            "{} ... {}.{} sec.",
+            checkmate_move.sfen(),
+            elapsed.as_secs(),
+            elapsed.subsec_nanos() / 1000000
+        );
+    }
+
+    {
+        position.set_sfen("5/4k/3pp/5/K4 b RG 1");
         let start = std::time::Instant::now();
         let (checkmate, checkmate_move) = position.solve_checkmate_dfs(7);
         let elapsed = start.elapsed();

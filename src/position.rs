@@ -297,7 +297,7 @@ impl Position {
     }
 
     pub fn generate_moves(&self) -> std::vec::Vec<Move> {
-        return self.generate_moves_with_option(true, true, false);
+        return self.generate_moves_with_option(true, true, false, false);
     }
 
     pub fn set_flags(&mut self) {
@@ -829,6 +829,7 @@ impl Position {
         is_board: bool,
         is_hand: bool,
         allow_illegal: bool,
+        check_drop_only: bool,
     ) -> std::vec::Vec<Move> {
         let mut moves: Vec<Move> = Vec::new();
 
@@ -1033,6 +1034,26 @@ impl Position {
             for piece_type in HAND_PIECE_TYPE_ALL.iter() {
                 if self.hand[self.side_to_move.as_usize()][piece_type.as_usize() - 2] > 0 {
                     let mut empty_squares = empty_squares;
+
+                    if check_drop_only {
+                        // 王手となる手のみを生成
+                        let op_king_square =
+                            get_square(self.piece_bb[PieceType::KING.get_piece(self.side_to_move.get_op_color()).as_usize()]);
+
+                        let mut check_squares: Bitboard = adjacent_attack(op_king_square, piece_type.get_piece(self.side_to_move.get_op_color()));
+
+                        let player_bb = (self.player_bb[Color::WHITE.as_usize()] | self.player_bb[Color::BLACK.as_usize()]) ^ (1 << op_king_square);
+
+                        if *piece_type == PieceType::BISHOP || *piece_type == PieceType::BISHOP_X {
+                            check_squares |= bishop_attack(op_king_square, player_bb);
+                        }
+
+                        if *piece_type == PieceType::ROOK || *piece_type == PieceType::ROOK_X {
+                            check_squares |= rook_attack(op_king_square, player_bb);
+                        }
+
+                        empty_squares &= check_squares;
+                    }
 
                     while empty_squares != 0 {
                         let target = get_square(empty_squares);
@@ -1674,13 +1695,13 @@ fn generate_moves_test() {
 
         while position.ply < MAX_PLY as u16 {
             let moves = position.generate_moves();
-            let allow_illegal_moves = position.generate_moves_with_option(true, true, true);
+            let allow_illegal_moves = position.generate_moves_with_option(true, true, true, false);
 
             let mut legal_move_count = allow_illegal_moves.len();
             for m in allow_illegal_moves {
                 position.do_move(&m);
 
-                let all_moves = position.generate_moves_with_option(true, true, true);
+                let all_moves = position.generate_moves_with_option(true, true, true, false);
 
                 for m2 in all_moves {
                     if m2.capture_piece.get_piece_type() == PieceType::KING {
