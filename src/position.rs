@@ -300,6 +300,10 @@ impl Position {
         return self.generate_moves_with_option(true, true, false, false);
     }
 
+    pub fn is_in_check(&self) -> bool {
+        return self.get_check_bb() != 0;
+    }
+
     pub fn set_flags(&mut self) {
         self.pawn_flags = [0; 2];
         self.piece_bb = [0; Piece::B_PAWN_X.as_usize() + 1];

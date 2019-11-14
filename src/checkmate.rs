@@ -34,7 +34,7 @@ fn attack(position: &mut Position, depth: i32) -> (bool, Move) {
     for m in &moves {
         position.do_move(m);
 
-        if position.get_check_bb() == 0 {
+        if !position.is_in_check() {
             position.undo_move();
             continue;
         }
