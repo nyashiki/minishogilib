@@ -84,7 +84,7 @@ impl Position {
                             - 2)
                             * SQUARE_NB
                             + i] = position.hand[self.side_to_move.as_usize()]
-                            [piece_type.as_usize() - 2] as f32;
+                            [piece_type.as_usize() - 2] as f32 / 2.0;
                     }
                 }
 
@@ -100,7 +100,7 @@ impl Position {
                             - 2)
                             * SQUARE_NB
                             + i] = position.hand[self.side_to_move.get_op_color().as_usize()]
-                            [piece_type.as_usize() - 2] as f32;
+                            [piece_type.as_usize() - 2] as f32 / 2.0;
                     }
                 }
             }
@@ -119,7 +119,7 @@ impl Position {
 
         // 手数を設定
         for i in 0..SQUARE_NB {
-            input_layer[SQUARE_NB + i] = self.ply as f32;
+            input_layer[SQUARE_NB + i] = self.ply as f32 / MAX_PLY as f32;
         }
 
         return input_layer;
