@@ -6,11 +6,11 @@ use types::*;
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Move {
     pub piece: Piece,
-    pub from: usize,          // 移動元 (持ち駒を打つ場合には、打つ場所)
+    pub from: usize,          // 移動元
     pub to: usize,            // 移動先
-    pub is_hand: bool,       // 持ち駒かどうか
+    pub is_hand: bool,        // 持ち駒を打つ手かどうか
     pub promotion: bool,      // 成/不成
-    pub capture_piece: Piece, // 取った相手の駒
+    pub capture_piece: Piece, // 取る相手の駒
 }
 
 #[pymethods]
