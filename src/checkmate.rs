@@ -72,7 +72,7 @@ fn defense(position: &mut Position, depth: i32) -> (bool, Move) {
 
     if moves.len() == 0
         && position.kif[position.ply as usize - 1].piece.get_piece_type() == PieceType::PAWN
-        && position.kif[position.ply as usize - 1].amount == 0
+        && position.kif[position.ply as usize - 1].is_hand
     {
         // 打ち歩詰め
         return (false, NULL_MOVE);

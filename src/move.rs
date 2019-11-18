@@ -7,9 +7,8 @@ use types::*;
 pub struct Move {
     pub piece: Piece,
     pub from: usize,          // 移動元 (持ち駒を打つ場合には、打つ場所)
-    pub direction: Direction, // 移動方向
-    pub amount: usize,        // 移動量 (0の場合には持ち駒)
     pub to: usize,            // 移動先
+    pub is_hand: bool,       // 持ち駒かどうか
     pub promotion: bool,      // 成/不成
     pub capture_piece: Piece, // 取った相手の駒
 }
@@ -23,7 +22,7 @@ impl Move {
 
         const HAND_PIECE_TO_CHAR: [char; 7] = ['E', 'E', 'G', 'S', 'B', 'R', 'P'];
 
-        if self.amount == 0 {
+        if self.is_hand {
             format!(
                 "{}*{}",
                 HAND_PIECE_TO_CHAR[self.piece.get_piece_type().as_usize()],
@@ -48,7 +47,7 @@ impl Move {
             "TO",
         ];
 
-        if self.amount == 0 {
+        if self.is_hand {
             format!(
                 "00{}{}",
                 square_to_csa_sfen(self.to),
@@ -92,16 +91,8 @@ impl Move {
         self.to
     }
 
-    pub fn get_amount(&self) -> usize {
-        self.amount
-    }
-
     pub fn get_promotion(&self) -> bool {
         self.promotion
-    }
-
-    pub fn get_direction(&self) -> usize {
-        self.direction as usize
     }
 
     pub fn get_hand_index(&self) -> usize {
@@ -113,8 +104,6 @@ impl Move {
     pub fn board_move(
         piece: Piece,
         from: usize,
-        direction: Direction,
-        amount: usize,
         to: usize,
         promotion: bool,
         capture_piece: Piece,
@@ -122,9 +111,8 @@ impl Move {
         Move {
             piece: piece,
             from: from,
-            direction: direction,
-            amount: amount,
             to: to,
+            is_hand: false,
             promotion: promotion,
             capture_piece: capture_piece,
         }
@@ -134,9 +122,8 @@ impl Move {
         Move {
             piece: piece,
             from: 0,
-            direction: Direction::N, // 不使用なので仮の値を入れておく
-            amount: 0,
             to: to,
+            is_hand: true,
             promotion: false,
             capture_piece: Piece::NO_PIECE,
         }
@@ -146,9 +133,8 @@ impl Move {
 pub static NULL_MOVE: Move = Move {
     piece: Piece::NO_PIECE,
     from: SQUARE_NB,
-    direction: Direction::N,
-    amount: 0,
     to: 0,
+    is_hand: false,
     promotion: false,
     capture_piece: Piece::NO_PIECE,
 };

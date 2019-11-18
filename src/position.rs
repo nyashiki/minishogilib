@@ -281,10 +281,9 @@ impl Position {
             let to = sfen_to_square(&sfen[2..4]);
             let promotion = sfen.len() == 5;
             let piece = self.board[from];
-            let (direction, amount) = get_relation(from, to);
             let capture_piece = self.board[to];
 
-            Move::board_move(piece, from, direction, amount, to, promotion, capture_piece)
+            Move::board_move(piece, from, to, promotion, capture_piece)
         }
     }
 
@@ -333,7 +332,7 @@ impl Position {
 
         self.hash[self.ply as usize + 1] = self.hash[self.ply as usize];
 
-        if m.amount == 0 {
+        if m.is_hand {
             // 持ち駒を打つ場合
 
             self.board[m.to as usize] = m.piece;
@@ -467,7 +466,7 @@ impl Position {
         // 手番を戻す
         self.side_to_move = self.side_to_move.get_op_color();
 
-        if m.amount == 0 {
+        if m.is_hand {
             // 持ち駒を打った場合
 
             self.board[m.to as usize] = Piece::NO_PIECE;
@@ -875,7 +874,6 @@ impl Position {
                         }
 
                         let capture_piece = self.board[move_to];
-                        let (move_dir, _) = get_relation(i, move_to);
 
                         if (self.board[i] == Piece::W_PAWN && move_to < 5)
                             || (self.board[i] == Piece::B_PAWN && move_to >= 20)
@@ -885,8 +883,6 @@ impl Position {
                             moves.push(Move::board_move(
                                 self.board[i],
                                 i,
-                                move_dir,
-                                1,
                                 move_to,
                                 false,
                                 capture_piece,
@@ -903,8 +899,6 @@ impl Position {
                             moves.push(Move::board_move(
                                 self.board[i],
                                 i,
-                                move_dir,
-                                1,
                                 move_to,
                                 true,
                                 capture_piece,
@@ -939,13 +933,10 @@ impl Position {
                         }
 
                         let capture_piece = self.board[move_to];
-                        let (move_dir, amount) = get_relation(i, move_to);
 
                         moves.push(Move::board_move(
                             self.board[i],
                             i,
-                            move_dir,
-                            amount,
                             move_to,
                             false,
                             capture_piece,
@@ -961,8 +952,6 @@ impl Position {
                             moves.push(Move::board_move(
                                 self.board[i],
                                 i,
-                                move_dir,
-                                amount,
                                 move_to,
                                 true,
                                 capture_piece,
@@ -992,13 +981,10 @@ impl Position {
                         }
 
                         let capture_piece = self.board[move_to];
-                        let (move_dir, amount) = get_relation(i, move_to);
 
                         moves.push(Move::board_move(
                             self.board[i],
                             i,
-                            move_dir,
-                            amount,
                             move_to,
                             false,
                             capture_piece,
@@ -1014,8 +1000,6 @@ impl Position {
                             moves.push(Move::board_move(
                                 self.board[i],
                                 i,
-                                move_dir,
-                                amount,
                                 move_to,
                                 true,
                                 capture_piece,
@@ -1099,7 +1083,7 @@ impl Position {
                 }
 
                 let is_legal = |m: Move| -> bool {
-                    if m.amount == 0 {
+                    if m.is_hand {
                         // 持ち駒を打つ場合
                         let player_bb: Bitboard = self.player_bb[Color::WHITE.as_usize()]
                             | self.player_bb[Color::BLACK.as_usize()]

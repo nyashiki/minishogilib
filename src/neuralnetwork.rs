@@ -233,28 +233,29 @@ impl Move {
     pub fn to_policy_index(&self) -> usize {
         let c: Color = self.piece.get_color();
 
-        let index = if self.amount == 0 {
+        let index = if self.is_hand {
             if c == Color::WHITE {
                 (64 + self.get_hand_index(), self.to)
             } else {
                 (64 + self.get_hand_index(), SQUARE_NB - 1 - self.to)
             }
         } else {
+            let (direction, amount) = get_relation(self.from, self.to);
             if self.get_promotion() {
                 if c == Color::WHITE {
-                    (32 + 4 * self.direction as usize + self.amount - 1, self.from)
+                    (32 + 4 * direction as usize + amount - 1, self.from)
                 } else {
                     (
-                        32 + 4 * ((self.direction as usize + 4) % 8) + self.amount - 1,
+                        32 + 4 * ((direction as usize + 4) % 8) + amount - 1,
                         SQUARE_NB - 1 - self.from,
                     )
                 }
             } else {
                 if c == Color::WHITE {
-                    (4 * self.direction as usize + self.amount - 1, self.from)
+                    (4 * direction as usize + amount - 1, self.from)
                 } else {
                     (
-                        4 * ((self.direction as usize + 4) % 8) + self.amount - 1,
+                        4 * ((direction as usize + 4) % 8) + amount - 1,
                         SQUARE_NB - 1 - self.from,
                     )
                 }
@@ -302,8 +303,6 @@ fn index_to_move(position: &Position, index: usize) -> Move {
                             moves.push(Move::board_move(
                                 Piece::NO_PIECE,
                                 i,
-                                DIRECTION_ALL[direction],
-                                amount + 1,
                                 0,
                                 promotion != 0,
                                 Piece::NO_PIECE,
@@ -339,10 +338,7 @@ fn to_policy_index_test() {
                 let index = m.to_policy_index();
                 let move_from_index = index_to_move(&position, index);
 
-                assert_eq!(m.amount, move_from_index.amount);
-                assert_eq!(m.direction, move_from_index.direction);
-
-                if m.amount == 0 {
+                if m.is_hand {
                     assert_eq!(m.to, move_from_index.to);
                 } else {
                     assert_eq!(m.from, move_from_index.from);
