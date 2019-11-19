@@ -58,9 +58,16 @@ impl Reservoir {
         let file = File::open(path).unwrap();
         let file = BufReader::new(file);
 
+        let mut line_count = 0;
+
+        println!("");
         for line in file.lines().filter_map(|x| x.ok()) {
+            print!("\rloading ... ({} entries).", line_count);
+
             self.push_with_option(&line, false);
+            line_count += 1;
         }
+        println!("\r{}[2Kloading ... ok.", 27 as char);
     }
 
     pub fn sample(
