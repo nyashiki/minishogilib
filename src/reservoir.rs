@@ -154,7 +154,7 @@ impl Reservoir {
 
                 let mut policy = [0f32; 69 * 5 * 5];
                 // Policy.
-                let (sum_n, _q, playouts) = &self.records[index].mcts_result[ply];
+                let (sum_n, q, playouts) = &self.records[index].mcts_result[ply];
 
                 for playout in playouts {
                     let m = position.sfen_to_move(&playout.0);
@@ -171,6 +171,9 @@ impl Reservoir {
                 } else {
                     -1.0
                 };
+
+                let scaled_q = q * 2.0 - 1.0;
+                let value = 0.5 * value + 0.5 * scaled_q;
 
                 (nninput, policy, value)
             })

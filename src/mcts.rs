@@ -68,11 +68,10 @@ impl Node {
             }
         }
 
-        // const C_BASE: f32 = 19652.0;
-        // const C_INIT: f32 = 1.25;
+        const C_BASE: f32 = 19652.0;
+        const C_INIT: f32 = 1.25;
 
-        // let c: f32 = ((1.0 + (self.n as f32) + C_BASE) / C_BASE).log2() + C_INIT;
-        let c: f32 = 1.5;
+        let c: f32 = ((1.0 + (self.n as f32) + C_BASE) / C_BASE).log2() + C_INIT;
 
         let q: f32 = if self.n as f32 + self.virtual_loss == 0.0 {
             0.0
