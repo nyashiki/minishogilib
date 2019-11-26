@@ -30,7 +30,7 @@ use pyo3::prelude::*;
 /// Total                  (10 + 10 + 3 + 5 + 5) * HISTORY_NUM + 2
 /// --------------------------------------------------------------
 
-const HISTORY: usize = 3;
+const HISTORY: usize = 8;
 const CHANNEL_NUM_PER_HISTORY: usize = 10 + 10 + 3 + 5 + 5;
 const CHANNEL_NUM: usize = CHANNEL_NUM_PER_HISTORY * HISTORY + 2;
 const KP_INPUT_NUM: usize = (25 * 19 * 25) * 2 + 5 * 2 + 1 + 1 + 1;
@@ -241,6 +241,8 @@ impl Move {
             }
         } else {
             let (direction, amount) = get_relation(self.from, self.to);
+            assert!(amount > 0);
+
             if self.get_promotion() {
                 if c == Color::WHITE {
                     (32 + 4 * direction as usize + amount - 1, self.from)
@@ -262,7 +264,7 @@ impl Move {
             }
         };
 
-        return index.0 * 25 + index.1;
+        return index.0 * SQUARE_NB + index.1;
     }
 }
 
