@@ -3,6 +3,7 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, Write};
 
+use neuralnetwork;
 use numpy::PyArray1;
 use position::*;
 use pyo3::prelude::*;
@@ -93,9 +94,7 @@ impl Reservoir {
         let mut black_win_target_count = 0;
         let mut counter = 0;
 
-        while white_win_target_count < white_win_target_count_max
-            || black_win_target_count < black_win_target_count_max
-        {
+        while counter < mini_batch_size {
             let mut ok = 0;
             let mut ng = self.max_size + 1;
 
@@ -179,8 +178,8 @@ impl Reservoir {
             })
             .collect();
 
-        let mut ins = std::vec::Vec::with_capacity(mini_batch_size * (8 * 33 + 2) * 5 * 5);
-        let mut policies = std::vec::Vec::with_capacity(mini_batch_size * 69 * 5 * 5);
+        let mut ins = std::vec::Vec::with_capacity(mini_batch_size * (neuralnetwork::HISTORY * 33 + 2) * SQUARE_NB);
+        let mut policies = std::vec::Vec::with_capacity(mini_batch_size * 69 * SQUARE_NB);
         let mut values = std::vec::Vec::with_capacity(mini_batch_size);
 
         for (_b, batch) in data.iter().enumerate() {

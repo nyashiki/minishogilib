@@ -30,7 +30,7 @@ use pyo3::prelude::*;
 /// Total                  (10 + 10 + 3 + 5 + 5) * HISTORY_NUM + 2
 /// --------------------------------------------------------------
 
-const HISTORY: usize = 8;
+pub const HISTORY: usize = 8;
 const CHANNEL_NUM_PER_HISTORY: usize = 10 + 10 + 3 + 5 + 5;
 const CHANNEL_NUM: usize = CHANNEL_NUM_PER_HISTORY * HISTORY + 2;
 const KP_INPUT_NUM: usize = (25 * 19 * 25) * 2 + 5 * 2 + 1 + 1 + 1;
