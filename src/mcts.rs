@@ -260,7 +260,7 @@ impl MCTS {
         np_policy: &PyArray1<f32>,
         mut value: f32,
     ) {
-        if self.game_tree[node].n > 0 {
+        if self.game_tree[node].children.len() > 0 || self.game_tree[node].is_terminal {
             return;
         }
 
