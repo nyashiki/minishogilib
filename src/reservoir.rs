@@ -171,8 +171,10 @@ impl Reservoir {
                     -1.0
                 };
 
+                /*
                 let scaled_q = q * 2.0 - 1.0;
                 let value = 0.5 * value + 0.5 * scaled_q;
+                */
 
                 (nninput, policy, value)
             })
