@@ -180,7 +180,9 @@ impl Reservoir {
             })
             .collect();
 
-        let mut ins = std::vec::Vec::with_capacity(mini_batch_size * (neuralnetwork::HISTORY * 33 + 2) * SQUARE_NB);
+        let mut ins = std::vec::Vec::with_capacity(
+            mini_batch_size * (neuralnetwork::HISTORY * 33 + 2) * SQUARE_NB,
+        );
         let mut policies = std::vec::Vec::with_capacity(mini_batch_size * 69 * SQUARE_NB);
         let mut values = std::vec::Vec::with_capacity(mini_batch_size);
 

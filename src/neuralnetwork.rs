@@ -84,7 +84,8 @@ impl Position {
                             - 2)
                             * SQUARE_NB
                             + i] = position.hand[self.side_to_move.as_usize()]
-                            [piece_type.as_usize() - 2] as f32 / 2.0;
+                            [piece_type.as_usize() - 2] as f32
+                            / 2.0;
                     }
                 }
 
@@ -100,7 +101,8 @@ impl Position {
                             - 2)
                             * SQUARE_NB
                             + i] = position.hand[self.side_to_move.get_op_color().as_usize()]
-                            [piece_type.as_usize() - 2] as f32 / 2.0;
+                            [piece_type.as_usize() - 2] as f32
+                            / 2.0;
                     }
                 }
             }
@@ -256,10 +258,7 @@ impl Move {
                 if c == Color::WHITE {
                     (4 * direction as usize + amount - 1, self.from)
                 } else {
-                    (
-                        4 * ((direction as usize + 4) % 8) + amount - 1,
-                        SQUARE_NB - 1 - self.from,
-                    )
+                    (4 * ((direction as usize + 4) % 8) + amount - 1, SQUARE_NB - 1 - self.from)
                 }
             }
         };

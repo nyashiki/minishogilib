@@ -1025,12 +1025,20 @@ impl Position {
 
                     if check_drop_only {
                         // 王手となる手のみを生成
-                        let op_king_square =
-                            get_square(self.piece_bb[PieceType::KING.get_piece(self.side_to_move.get_op_color()).as_usize()]);
+                        let op_king_square = get_square(
+                            self.piece_bb[PieceType::KING
+                                .get_piece(self.side_to_move.get_op_color())
+                                .as_usize()],
+                        );
 
-                        let mut check_squares: Bitboard = adjacent_attack(op_king_square, piece_type.get_piece(self.side_to_move.get_op_color()));
+                        let mut check_squares: Bitboard = adjacent_attack(
+                            op_king_square,
+                            piece_type.get_piece(self.side_to_move.get_op_color()),
+                        );
 
-                        let player_bb = (self.player_bb[Color::WHITE.as_usize()] | self.player_bb[Color::BLACK.as_usize()]) ^ (1 << op_king_square);
+                        let player_bb = (self.player_bb[Color::WHITE.as_usize()]
+                            | self.player_bb[Color::BLACK.as_usize()])
+                            ^ (1 << op_king_square);
 
                         if *piece_type == PieceType::BISHOP || *piece_type == PieceType::BISHOP_X {
                             check_squares |= bishop_attack(op_king_square, player_bb);
