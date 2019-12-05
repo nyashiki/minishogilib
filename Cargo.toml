@@ -8,7 +8,7 @@ name = "minishogilib"
 crate-type = ["cdylib"]
 
 [dependencies.pyo3]
-version = "0.8.1"
+version = "0.8.3"
 
 [features]
 extension-module = ["pyo3/extension-module"]
