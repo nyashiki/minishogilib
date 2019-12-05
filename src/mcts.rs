@@ -17,7 +17,7 @@ pub struct Node {
     pub parent: usize,
     pub children: std::vec::Vec<usize>,
     pub is_terminal: bool,
-    pub virtual_loss: f32,
+    pub virtual_loss: u32,
     pub is_used: bool,
 }
 
@@ -32,7 +32,7 @@ impl Node {
             parent: parent,
             children: Vec::new(),
             is_terminal: false,
-            virtual_loss: 0.0,
+            virtual_loss: 0,
             is_used: is_used,
         }
     }
@@ -47,7 +47,7 @@ impl Node {
         self.children.clear();
         self.children.shrink_to_fit();
         self.is_terminal = false;
-        self.virtual_loss = 0.0;
+        self.virtual_loss = 0;
         self.is_used = false;
     }
 
@@ -73,12 +73,12 @@ impl Node {
 
         let c: f32 = ((1.0 + (self.n as f32) + C_BASE) / C_BASE).log2() + C_INIT;
 
-        let q: f32 = if self.n as f32 + self.virtual_loss == 0.0 {
+        let q: f32 = if self.n + self.virtual_loss == 0 {
             0.0
         } else {
-            1.0 - (self.w + self.virtual_loss) / (self.n as f32 + self.virtual_loss)
+            1.0 - (self.w + self.virtual_loss as f32) / (self.n + self.virtual_loss) as f32
         };
-        let u: f32 = self.p * parent_n.sqrt() / (1.0 + (self.n as f32) + self.virtual_loss);
+        let u: f32 = self.p * parent_n.sqrt() / (1.0 + (self.n + self.virtual_loss) as f32);
 
         return q + c * u;
     }
@@ -238,7 +238,7 @@ impl MCTS {
         let mut node = root_node;
 
         loop {
-            self.game_tree[node].virtual_loss += 1.0;
+            self.game_tree[node].virtual_loss += 1;
 
             if self.game_tree[node].is_terminal || !self.game_tree[node].expanded() {
                 break;
@@ -366,7 +366,7 @@ impl MCTS {
         while node != 0 {
             self.game_tree[node].w += if !flip { value } else { 1.0 - value };
             self.game_tree[node].n += 1;
-            self.game_tree[node].virtual_loss -= 1.0;
+            self.game_tree[node].virtual_loss -= 1;
             node = self.game_tree[node].parent;
             flip = !flip;
         }
@@ -582,7 +582,7 @@ impl MCTS {
 
         for child in &self.game_tree[node].children {
             let puct = self.game_tree[*child].get_puct(
-                self.game_tree[node].n as f32 + self.game_tree[node].virtual_loss,
+                (self.game_tree[node].n + self.game_tree[node].virtual_loss) as f32,
                 forced_playouts,
             );
 
