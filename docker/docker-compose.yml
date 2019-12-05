@@ -8,8 +8,8 @@ services:
         bash -c "apt update &&
               apt-get install -y curl python3-pip python3.7 &&
               curl https://sh.rustup.rs -sSf | sh -s -- -y &&
-              pip3 install pyo3-pack &&
+              pip3 install maturin &&
               source /root/.cargo/env &&
               rustup default nightly &&
               cd minishogilib/ &&
-              pyo3-pack build"
+              maturin build --release"
