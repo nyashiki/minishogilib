@@ -1,0 +1,17 @@
+name: wheel
+
+on: [push]
+
+jobs:
+  wheel:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: Wheel
+        run: |
+          cd docker
+          docker-compose up build
+      - uses: actions/upload-artifact@master
+        with:
+          name: artifacts
+          path: ./target/wheels/

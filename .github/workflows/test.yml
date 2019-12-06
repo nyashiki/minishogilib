@@ -11,4 +11,4 @@ jobs:
         run: |
           rustup install nightly
           rustup override set nightly
-          cargo test --release --verbose
+          cargo test --release --verbose --no-default-features

@@ -5,6 +5,7 @@ use types::*;
 use numpy::PyArray1;
 use pyo3::prelude::*;
 use rand::distributions::Distribution;
+use rand::Rng;
 
 #[derive(Clone)]
 pub struct Node {
@@ -16,7 +17,7 @@ pub struct Node {
     pub parent: usize,
     pub children: std::vec::Vec<usize>,
     pub is_terminal: bool,
-    pub virtual_loss: f32,
+    pub virtual_loss: u32,
     pub is_used: bool,
 }
 
@@ -31,7 +32,7 @@ impl Node {
             parent: parent,
             children: Vec::new(),
             is_terminal: false,
-            virtual_loss: 0.0,
+            virtual_loss: 0,
             is_used: is_used,
         }
     }
@@ -46,14 +47,11 @@ impl Node {
         self.children.clear();
         self.children.shrink_to_fit();
         self.is_terminal = false;
-        self.virtual_loss = 0.0;
+        self.virtual_loss = 0;
         self.is_used = false;
     }
 
     pub fn get_puct(&self, parent_n: f32, forced_playouts: bool) -> f32 {
-        const C_BASE: f32 = 19652.0;
-        const C_INIT: f32 = 1.25;
-
         if self.is_terminal {
             if self.v == 0.0 {
                 return std::f32::MAX;
@@ -70,15 +68,19 @@ impl Node {
             }
         }
 
+        const C_BASE: f32 = 19652.0;
+        const C_INIT: f32 = 1.25;
+
         let c: f32 = ((1.0 + (self.n as f32) + C_BASE) / C_BASE).log2() + C_INIT;
-        let q: f32 = if self.n as f32 + self.virtual_loss == 0.0 {
+
+        let q: f32 = if self.n + self.virtual_loss == 0 {
             0.0
         } else {
-            1.0 - (self.w + self.virtual_loss) / (self.n as f32 + self.virtual_loss)
+            1.0 - (self.w + self.virtual_loss as f32) / (self.n + self.virtual_loss) as f32
         };
-        let u: f32 = c * self.p * parent_n.sqrt() / (1.0 + (self.n as f32) + self.virtual_loss);
+        let u: f32 = self.p * parent_n.sqrt() / (1.0 + (self.n + self.virtual_loss) as f32);
 
-        return q + u;
+        return q + c * u;
     }
 
     pub fn expanded(&self) -> bool {
@@ -155,10 +157,44 @@ impl MCTS {
         return 1;
     }
 
+    pub fn expanded(&self, node: usize) -> bool {
+        return self.game_tree[node].is_terminal || self.game_tree[node].expanded();
+    }
+
     pub fn best_move(&self, node: usize) -> Move {
         let best_child: usize = self.select_n_max_child(node);
 
         return self.game_tree[best_child].m;
+    }
+
+    pub fn softmax_sample(&self, node: usize, temperature: f32) -> Move {
+        let mut visit_max: i32 = 0;
+
+        for child in &self.game_tree[node].children {
+            if self.game_tree[*child].n as i32 > visit_max {
+                visit_max = self.game_tree[*child].n as i32;
+            }
+        }
+
+        let mut sum: f32 = 0.0;
+
+        for child in &self.game_tree[node].children {
+            sum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp();
+        }
+
+        let mut rng = rand::thread_rng();
+        let r: f32 = rng.gen();
+
+        let mut cum: f32 = 0.0;
+
+        for child in &self.game_tree[node].children {
+            cum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp() / sum;
+            if r < cum {
+                return self.game_tree[*child].m;
+            }
+        }
+
+        return self.game_tree[self.game_tree[node].children[0]].m;
     }
 
     pub fn print(&self, root: usize) {
@@ -189,6 +225,10 @@ impl MCTS {
         return self.node_used_count as f32 / self.size as f32;
     }
 
+    pub fn get_nodes(&self) -> usize {
+        return self.node_used_count;
+    }
+
     pub fn select_leaf(
         &mut self,
         root_node: usize,
@@ -198,7 +238,7 @@ impl MCTS {
         let mut node = root_node;
 
         loop {
-            self.game_tree[node].virtual_loss += 1.0;
+            self.game_tree[node].virtual_loss += 1;
 
             if self.game_tree[node].is_terminal || !self.game_tree[node].expanded() {
                 break;
@@ -219,15 +259,14 @@ impl MCTS {
         position: &Position,
         np_policy: &PyArray1<f32>,
         mut value: f32,
-        dirichlet_noise: bool,
-    ) -> f32 {
-        if !dirichlet_noise && self.game_tree[node].n > 0 {
-            return self.game_tree[node].v;
+    ) {
+        if self.game_tree[node].children.len() > 0 || self.game_tree[node].is_terminal {
+            return;
         }
 
         let policy = np_policy.as_array();
         let mut legal_policy_sum: f32 = 0.0;
-        let mut policy_max: f32 = 0.0;
+        let mut policy_max: f32 = std::f32::MIN;
         let moves = position.generate_moves();
 
         for m in &moves {
@@ -242,7 +281,7 @@ impl MCTS {
 
         let (is_repetition, is_check_repetition) = position.is_repetition();
 
-        if is_repetition || moves.len() == 0 {
+        if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
             self.game_tree[node].is_terminal = true;
         }
 
@@ -251,10 +290,12 @@ impl MCTS {
             if is_check_repetition {
                 value = 1.0;
             } else if is_repetition {
-                value = if position.side_to_move == Color::White { 0.0 } else { 1.0 }
+                value = if position.side_to_move == Color::WHITE { 0.0 } else { 1.0 }
+            } else if position.ply == MAX_PLY as u16 {
+                value = 0.5;
             } else {
                 value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
-                    == PieceType::Pawn
+                    == PieceType::PAWN
                 {
                     // 打ち歩詰め
                     1.0
@@ -265,27 +306,9 @@ impl MCTS {
             }
         }
 
-        let mut noise: std::vec::Vec<f64> = vec![0.0; moves.len()];
-
-        if dirichlet_noise {
-            let mut noise_sum = 0.0;
-            let gamma = rand::distributions::Gamma::new(0.34, 1.0);
-
-            for (i, _) in moves.iter().enumerate() {
-                let v = gamma.sample(&mut rand::thread_rng());
-
-                noise[i] = v;
-                noise_sum += v;
-            }
-
-            for v in &mut noise {
-                *v /= noise_sum;
-            }
-        }
-
         // set policy and vaue
-        if self.game_tree[node].children.len() == 0 {
-            for (i, m) in moves.iter().enumerate() {
+        if !self.game_tree[node].is_terminal {
+            for m in &moves {
                 let policy_index = m.to_policy_index();
 
                 let mut index = self.node_index;
@@ -295,12 +318,7 @@ impl MCTS {
                     }
 
                     if !self.game_tree[index].is_used {
-                        let p = if dirichlet_noise {
-                            ((policy[policy_index] - policy_max).exp() / legal_policy_sum) * 0.75
-                                + (noise[i] as f32) * 0.25
-                        } else {
-                            (policy[policy_index] - policy_max).exp() / legal_policy_sum
-                        };
+                        let p = (policy[policy_index] - policy_max).exp() / legal_policy_sum;
 
                         self.game_tree[index] = Node::new(node, *m, p, true);
                         self.game_tree[node].children.push(index);
@@ -312,34 +330,43 @@ impl MCTS {
                     index = (index + 1) % self.size;
                 }
             }
-        } else if dirichlet_noise {
-            let children = self.game_tree[node].children.clone();
-
-            for (i, child) in children.iter().enumerate() {
-                let policy_index = self.game_tree[*child].m.to_policy_index();
-
-                self.game_tree[*child].p = if dirichlet_noise {
-                    ((policy[policy_index] - policy_max).exp() / legal_policy_sum) * 0.75
-                        + (noise[i] as f32) * 0.25
-                } else {
-                    (policy[policy_index] - policy_max).exp() / legal_policy_sum
-                };
-            }
         }
 
         self.game_tree[node].v = value;
-
-        return value;
     }
 
-    pub fn backpropagate(&mut self, leaf_node: usize, value: f32) {
+    pub fn add_noise(&mut self, node: usize) {
+        let mut noise: std::vec::Vec<f64> = vec![0.0; self.game_tree[node].children.len()];
+        let mut noise_sum = 0.0;
+        let gamma = rand::distributions::Gamma::new(0.34, 1.0);
+
+        for i in 0..self.game_tree[node].children.len() {
+            let v = gamma.sample(&mut rand::thread_rng());
+
+            noise[i] = v;
+            noise_sum += v;
+        }
+
+        for v in &mut noise {
+            *v /= noise_sum;
+        }
+
+        let children = self.game_tree[node].children.clone();
+
+        for (i, child) in children.iter().enumerate() {
+            self.game_tree[*child].p = (0.75 * self.game_tree[*child].p) + (0.25 * noise[i] as f32);
+        }
+    }
+
+    pub fn backpropagate(&mut self, leaf_node: usize) {
         let mut node = leaf_node;
         let mut flip = false;
+        let value = self.game_tree[node].v;
 
         while node != 0 {
             self.game_tree[node].w += if !flip { value } else { 1.0 - value };
             self.game_tree[node].n += 1;
-            self.game_tree[node].virtual_loss -= 1.0;
+            self.game_tree[node].virtual_loss -= 1;
             node = self.game_tree[node].parent;
             flip = !flip;
         }
@@ -555,7 +582,7 @@ impl MCTS {
 
         for child in &self.game_tree[node].children {
             let puct = self.game_tree[*child].get_puct(
-                self.game_tree[node].n as f32 + self.game_tree[node].virtual_loss,
+                (self.game_tree[node].n + self.game_tree[node].virtual_loss) as f32,
                 forced_playouts,
             );
 
