@@ -21,7 +21,7 @@ pub struct Position {
     pub player_bb: [Bitboard; 2],
     pub adjacent_check_bb: [Bitboard; MAX_PLY + 1], // 近接駒による王手を表すbitboard
     pub long_check_bb: [Bitboard; MAX_PLY + 1],     /* 長い利きを持つ駒による王手を表すbitboard */
-    pub sequent_check_count: [[i8; 2]; MAX_PLY + 1],
+    pub sequent_check_count: [[u8; 2]; MAX_PLY + 1],
 }
 
 #[pymethods]
@@ -526,23 +526,24 @@ impl Position {
 
         let mut count = 0;
 
-        let mut ply = self.ply as i32 - 2;
+        let mut ply = self.ply as i32 - 4;
+        let mut check_repetition = false;
+
         while ply >= 0 {
             if self.hash[ply as usize] == self.hash[self.ply as usize] {
                 count += 1;
+
+                if count == 1 {
+                    if self.sequent_check_count[self.ply as usize][self.side_to_move.as_usize()] >= (self.ply + 1 - ply as u16) as u8 / 2 ||
+                       self.sequent_check_count[self.ply as usize][self.side_to_move.get_op_color().as_usize()] >= (self.ply + 1 - ply as u16) as u8 / 2 {
+                        check_repetition = true;
+                    }
+                }
             }
 
-            // 現在の局面の1手前から数え始めているので、3回(+現在の局面 1回)で千日手
+            // 現在の局面の1手前から数え始めているので、3回 (+ 現在の局面 1回) で千日手
             if count == 3 {
-                // 連続王手
-                if self.sequent_check_count[self.ply as usize]
-                    [self.side_to_move.get_op_color().as_usize()]
-                    >= 7
-                {
-                    return (true, true);
-                }
-
-                return (true, false);
+                return (true, check_repetition);
             }
 
             ply -= 2; // 繰り返し回数は、同じ手番の過去局面だけを見れば良い
@@ -555,7 +556,7 @@ impl Position {
     pub fn get_repetition(&self) -> usize {
         let mut count: usize = 0;
 
-        let mut ply = self.ply as i32 - 2;
+        let mut ply = self.ply as i32 - 4;
         while ply >= 0 {
             if self.hash[ply as usize] == self.hash[self.ply as usize] {
                 count += 1;
@@ -1777,7 +1778,6 @@ fn is_repetition_test() {
     assert_eq!(position.is_repetition(), (true, false));
 
     position.set_sfen(REPETITION_SFEN2);
-    position.print();
     assert_eq!(position.is_repetition(), (true, false));
 
     position.set_sfen(CHECK_REPETITION_SFEN);

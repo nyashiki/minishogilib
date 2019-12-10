@@ -86,7 +86,7 @@ fn defense(position: &mut Position, depth: i32) -> (bool, Move) {
             position.undo_move();
 
             if check_repetition {
-                continue;
+                return (false, NULL_MOVE);
             }
 
             if position.side_to_move == Color::BLACK {
