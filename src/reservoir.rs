@@ -51,6 +51,10 @@ impl Reservoir {
         }
     }
 
+    pub fn len(&self) -> usize {
+        return self.records.len();
+    }
+
     pub fn push(&mut self, record_json: &str) {
         self.push_with_option(record_json, true);
     }
