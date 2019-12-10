@@ -79,6 +79,7 @@ impl Reservoir {
         &self,
         py: Python,
         mini_batch_size: usize,
+        flat_sampling: bool
     ) -> (Py<PyArray1<f32>>, Py<PyArray1<f32>>, Py<PyArray1<f32>>) {
         let mut cumulative_plys = vec![0; self.max_size + 1];
 
@@ -114,20 +115,22 @@ impl Reservoir {
                 }
             }
 
-            if Color(self.records[ok].winner) == Color::WHITE {
-                if white_win_target_count == white_win_target_count_max {
+            if flat_sampling {
+                if Color(self.records[ok].winner) == Color::WHITE {
+                    if white_win_target_count == white_win_target_count_max {
+                        continue;
+                    }
+
+                    white_win_target_count += 1;
+                } else if Color(self.records[ok].winner) == Color::BLACK {
+                    if black_win_target_count == black_win_target_count_max {
+                        continue;
+                    }
+
+                    black_win_target_count += 1;
+                } else {
                     continue;
                 }
-
-                white_win_target_count += 1;
-            } else if Color(self.records[ok].winner) == Color::BLACK {
-                if black_win_target_count == black_win_target_count_max {
-                    continue;
-                }
-
-                black_win_target_count += 1;
-            } else {
-                continue;
             }
 
             let ply = self.learning_targets[ok][index - cumulative_plys[ok]];
