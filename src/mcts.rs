@@ -197,6 +197,42 @@ impl MCTS {
         return self.game_tree[self.game_tree[node].children[0]].m;
     }
 
+    pub fn softmax_sample_among_top_moves(&self, node: usize, away: f32, temperature: f32) -> Move {
+        let best_child: usize = self.select_n_max_child(node);
+        let visit_max: i32 = self.game_tree[best_child].n as i32;
+        let best_q = 1.0 - self.game_tree[best_child].w / self.game_tree[best_child].n as f32;
+
+        let mut sum: f32 = 0.0;
+
+        for child in &self.game_tree[node].children {
+            let q = 1.0 - self.game_tree[*child].w / self.game_tree[*child].n as f32;
+            if q < best_q - away {
+                continue;
+            }
+
+            sum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp();
+        }
+
+        let mut rng = rand::thread_rng();
+        let r: f32 = rng.gen();
+
+        let mut cum: f32 = 0.0;
+
+        for child in &self.game_tree[node].children {
+            let q = 1.0 - self.game_tree[*child].w / self.game_tree[*child].n as f32;
+            if q < best_q - away {
+                continue;
+            }
+
+            cum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp() / sum;
+            if r < cum {
+                return self.game_tree[*child].m;
+            }
+        }
+
+        return self.game_tree[self.game_tree[node].children[0]].m;
+    }
+
     pub fn print(&self, root: usize) {
         println!(
             "usage: {:.3}% ({}/{})",
