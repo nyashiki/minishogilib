@@ -168,18 +168,10 @@ impl MCTS {
     }
 
     pub fn softmax_sample(&self, node: usize, temperature: f32) -> Move {
-        let mut visit_max: i32 = 0;
-
-        for child in &self.game_tree[node].children {
-            if self.game_tree[*child].n as i32 > visit_max {
-                visit_max = self.game_tree[*child].n as i32;
-            }
-        }
-
         let mut sum: f32 = 0.0;
 
         for child in &self.game_tree[node].children {
-            sum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp();
+            sum += (self.game_tree[*child].n as f32).powf(1.0 / temperature);
         }
 
         let mut rng = rand::thread_rng();
@@ -188,7 +180,7 @@ impl MCTS {
         let mut cum: f32 = 0.0;
 
         for child in &self.game_tree[node].children {
-            cum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp() / sum;
+            cum += (self.game_tree[*child].n as f32).powf(1.0 / temperature) / sum;
             if r < cum {
                 return self.game_tree[*child].m;
             }
@@ -199,7 +191,6 @@ impl MCTS {
 
     pub fn softmax_sample_among_top_moves(&self, node: usize, away: f32, temperature: f32) -> Move {
         let best_child: usize = self.select_n_max_child(node);
-        let visit_max: i32 = self.game_tree[best_child].n as i32;
         let best_q = 1.0 - self.game_tree[best_child].w / self.game_tree[best_child].n as f32;
 
         let mut sum: f32 = 0.0;
@@ -210,7 +201,7 @@ impl MCTS {
                 continue;
             }
 
-            sum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp();
+            sum += (self.game_tree[*child].n as f32).powf(1.0 / temperature);
         }
 
         let mut rng = rand::thread_rng();
@@ -224,7 +215,7 @@ impl MCTS {
                 continue;
             }
 
-            cum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp() / sum;
+            cum += (self.game_tree[*child].n as f32).powf(1.0 / temperature) / sum;
             if r < cum {
                 return self.game_tree[*child].m;
             }
