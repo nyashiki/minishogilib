@@ -36,7 +36,7 @@ const CHANNEL_NUM: usize = CHANNEL_NUM_PER_HISTORY * HISTORY + 2;
 
 impl Position {
     /// \[チャネル * y座標 * x座標\]の形式で返す
-    pub fn to_alphazero_input_array(&self) -> [f32; CHANNEL_NUM * SQUARE_NB] {
+    pub fn to_alphazero_input_array(&self, flip: bool) -> [f32; CHANNEL_NUM * SQUARE_NB] {
         let mut input_layer = [0f32; CHANNEL_NUM * SQUARE_NB];
 
         let mut position = *self;
@@ -50,19 +50,28 @@ impl Position {
             for i in 0..SQUARE_NB {
                 // 盤上の駒を設定
                 if position.board[i] != Piece::NO_PIECE {
+                    let index = if !flip {
+                        i
+                    } else {
+                        let y = i / 5;
+                        let x = 4 - i % 5;
+
+                        y * 5 + x
+                    };
+
                     if self.side_to_move == Color::WHITE {
                         input_layer[(2
                             + h * CHANNEL_NUM_PER_HISTORY
                             + piece_to_sequential_index(position.board[i]))
                             * SQUARE_NB
-                            + i] = 1f32;
+                            + index] = 1f32;
                     } else {
                         // 後手番の場合には、盤面を回転させて設定する
                         input_layer[(2
                             + h * CHANNEL_NUM_PER_HISTORY
                             + piece_to_sequential_index(position.board[i].get_op_piece()))
                             * SQUARE_NB
-                            + (SQUARE_NB - i - 1)] = 1f32;
+                            + (SQUARE_NB - index - 1)] = 1f32;
                     }
                 }
 

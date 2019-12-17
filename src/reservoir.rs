@@ -79,7 +79,8 @@ impl Reservoir {
         &self,
         py: Python,
         mini_batch_size: usize,
-        flat_sampling: bool
+        flat_sampling: bool,
+        symmetry: bool,
     ) -> (Py<PyArray1<f32>>, Py<PyArray1<f32>>, Py<PyArray1<f32>>) {
         let mut cumulative_plys = vec![0; self.max_size + 1];
 
@@ -156,15 +157,21 @@ impl Reservoir {
                     position.do_move(&m);
                 }
 
-                let nninput = position.to_alphazero_input_array();
+                let flip = symmetry && rand::random();
+
+                let nninput = position.to_alphazero_input_array(flip);
 
                 let mut policy = [0f32; 69 * 5 * 5];
                 // Policy.
                 let (sum_n, q, playouts) = &self.records[index].mcts_result[ply];
 
                 for playout in playouts {
-                    let m = position.sfen_to_move(&playout.0);
+                    let mut m = position.sfen_to_move(&playout.0);
                     let n = playout.1;
+
+                    if flip {
+                        m = m.flip();
+                    }
 
                     policy[m.to_policy_index()] = n as f32 / *sum_n as f32;
                 }
