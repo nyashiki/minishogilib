@@ -33,7 +33,6 @@ use pyo3::prelude::*;
 pub const HISTORY: usize = 8;
 const CHANNEL_NUM_PER_HISTORY: usize = 10 + 10 + 3 + 5 + 5;
 const CHANNEL_NUM: usize = CHANNEL_NUM_PER_HISTORY * HISTORY + 2;
-const KP_INPUT_NUM: usize = (25 * 19 * 25) * 2 + 5 * 2 + 1 + 1 + 1;
 
 impl Position {
     /// \[チャネル * y座標 * x座標\]の形式で返す
@@ -126,107 +125,12 @@ impl Position {
 
         return input_layer;
     }
-
-    /// 11888要素のベクトルの形式で返す
-    /// 25 * 19 * 25: 自分の玉の場所 * 自分の玉以外の駒の種類と場所
-    /// 25 * 19 * 25: 相手の玉の場所 * 相手の玉以外の駒の種類と場所
-    /// 5 * 2       : 持ち駒の数
-    /// 1           : 手番
-    /// 1           : 手数
-    /// 1           : 繰り返し回数
-    pub fn to_kp_input_array(&self) -> [f32; KP_INPUT_NUM] {
-        let mut input_layer = [0f32; KP_INPUT_NUM];
-
-        // 自分の玉に関するKP
-        let my_king_square = if self.side_to_move == Color::WHITE {
-            ::bitboard::get_square(self.piece_bb[Piece::W_KING.as_usize()])
-        } else {
-            ::bitboard::get_square(self.piece_bb[Piece::B_KING.as_usize()])
-        };
-
-        let offset = if self.side_to_move == Color::WHITE {
-            my_king_square * 19 * 25
-        } else {
-            (SQUARE_NB - 1 - my_king_square) * 19 * 25
-        };
-
-        for i in 0..SQUARE_NB {
-            if i == my_king_square || self.board[i] == Piece::NO_PIECE {
-                continue;
-            }
-
-            if self.side_to_move == Color::WHITE {
-                let index = (piece_to_sequential_index(self.board[i]) - 1) * 25 + i;
-                input_layer[offset + index] = 1.0;
-            } else {
-                let index = (piece_to_sequential_index(self.board[i].get_op_piece()) - 1) * 25
-                    + (SQUARE_NB - 1 - i);
-                input_layer[offset + index] = 1.0;
-            }
-        }
-
-        // 相手の玉に関するKP
-        let op_king_square = if self.side_to_move == Color::WHITE {
-            ::bitboard::get_square(self.piece_bb[Piece::B_KING.as_usize()])
-        } else {
-            ::bitboard::get_square(self.piece_bb[Piece::W_KING.as_usize()])
-        };
-
-        let offset = if self.side_to_move == Color::WHITE {
-            25 * 19 * 25 + op_king_square * 19 * 25
-        } else {
-            25 * 19 * 25 + (SQUARE_NB - 1 - op_king_square) * 19 * 25
-        };
-
-        for i in 0..SQUARE_NB {
-            if i == op_king_square || self.board[i] == Piece::NO_PIECE {
-                continue;
-            }
-
-            if self.side_to_move == Color::WHITE {
-                let index = if (self.board[i].as_usize()) < (Piece::B_KING.as_usize()) {
-                    piece_to_sequential_index(self.board[i]) * 25 + i
-                } else {
-                    (piece_to_sequential_index(self.board[i]) - 1) * 25 + i
-                };
-                input_layer[offset + index] = 1.0;
-            } else {
-                let index = if (self.board[i].as_usize()) < (Piece::B_KING.as_usize()) {
-                    piece_to_sequential_index(self.board[i]) * 25 + (SQUARE_NB - 1 - i)
-                } else {
-                    (piece_to_sequential_index(self.board[i]) - 1) * 25 + (SQUARE_NB - 1 - i)
-                };
-                input_layer[offset + index] = 1.0;
-            }
-        }
-
-        for piece_type in HAND_PIECE_TYPE_ALL.iter() {
-            input_layer[25 * 19 * 25 * 2 + piece_type.as_usize() - 2] =
-                self.hand[self.side_to_move.as_usize()][piece_type.as_usize() - 2] as f32;
-            input_layer[25 * 19 * 25 * 2 + 5 + piece_type.as_usize() - 2] = self.hand
-                [self.side_to_move.get_op_color().as_usize()][piece_type.as_usize() - 2]
-                as f32;
-        }
-
-        if self.side_to_move == Color::BLACK {
-            input_layer[25 * 19 * 25 * 2 + 5 * 2] = 1.0;
-        }
-
-        input_layer[25 * 19 * 25 * 2 + 5 * 2 + 1] = self.ply as f32;
-        input_layer[25 * 19 * 25 * 2 + 5 * 2 + 2] = self.get_repetition() as f32;
-
-        return input_layer;
-    }
 }
 
 #[pymethods]
 impl Position {
     pub fn to_alphazero_input(&self, py: Python) -> Py<PyArray1<f32>> {
-        return PyArray1::from_slice(py, &self.to_alphazero_input_array()).to_owned();
-    }
-
-    pub fn to_kp_input(&self, py: Python) -> Py<PyArray1<f32>> {
-        return PyArray1::from_slice(py, &self.to_kp_input_array()).to_owned();
+        return PyArray1::from_slice(py, &self.to_alphazero_input_array(false)).to_owned();
     }
 }
 
