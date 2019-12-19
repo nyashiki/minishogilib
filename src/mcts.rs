@@ -178,8 +178,8 @@ impl MCTS {
     /// Sample a move to play along the number of visitations for each node.
     ///
     /// Note: In AlphaZero and MuZero pseudo-codes, `softmax_sampling` is used.
-    ///       According to the papers, however, `softmax_sampling` doesn't represent
-    ///       normal Softmax, and it samples along the number of visitations powered by `temperature`.
+    ///       According to the papers, however, `softmax_sampling` doesn't represent the normal Softmax function,
+    ///       and it samples along the number of visitations powered by `temperature`.
     ///
     /// Arguments:
     /// * `node`: The target node.
@@ -582,8 +582,8 @@ impl MCTS {
     ///
     /// Arguments:
     /// * `node`: The target node.
-    /// * `child_sum`: If true, the summantion of children N will be used in stread of node N
-    ///                (These are different when target_pruning is enabled.)
+    /// * `child_sum`: If true, the summantion of children N will be used instead of node N
+    ///                (These can be different when target_pruning is enabled.)
     pub fn get_playouts(&self, node: usize, child_sum: bool) -> u32 {
         if child_sum {
             let mut sum: u32 = 0;
