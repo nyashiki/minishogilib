@@ -6,6 +6,10 @@ use types::*;
 
 #[pymethods]
 impl Position {
+    /// Solve checkmate by the Depth First Search algorithm.
+    ///
+    /// Arguments:
+    /// * `depth`: The depth to search.
     pub fn solve_checkmate_dfs(&mut self, depth: i32) -> (bool, Move) {
         for i in (1..depth + 1).step_by(2) {
             let (checkmate, m) = attack(self, i as i32);

@@ -696,6 +696,7 @@ impl Position {
 }
 
 impl Position {
+    /// Generate an empty board instance.
     pub fn empty_board() -> Position {
         Position {
             side_to_move: Color::NO_COLOR,
@@ -713,7 +714,7 @@ impl Position {
         }
     }
 
-    /// 盤上の駒からbitboardを設定する
+    /// Set bitboards.
     fn set_bitboard(&mut self) {
         // 初期化
         for i in 0..Piece::B_PAWN_X.as_usize() + 1 {
@@ -731,6 +732,7 @@ impl Position {
         }
     }
 
+    /// Set check bitboards.
     fn set_check_bb(&mut self) {
         self.adjacent_check_bb[self.ply as usize] = 0;
         self.long_check_bb[self.ply as usize] = 0;
@@ -770,6 +772,7 @@ impl Position {
                 [PieceType::ROOK_X.get_piece(self.side_to_move.get_op_color()).as_usize()];
     }
 
+    /// Calculate the hash from scratch.
     fn calculate_hash(&self) -> (u64, u64) {
         let mut hash: u64 = 0;
 
@@ -794,6 +797,7 @@ impl Position {
         return (hash, hand_hash);
     }
 
+    /// Get the hash.
     fn get_hash(&self) -> (u64, u64) {
         return self.hash[self.ply as usize];
     }
@@ -810,6 +814,7 @@ impl Position {
         return self.get_adjacent_check_bb() | self.get_long_check_bb();
     }
 
+    /// Get the sfen representation of the position.
     pub fn get_sfen_position(&self) -> String {
         let mut sfen_position = String::new();
 
@@ -878,6 +883,13 @@ impl Position {
         return sfen_position;
     }
 
+    /// Generate legal moves.
+    ///
+    /// Arguments:
+    /// * `is_board`: If true, moves whose from position is on board are generated.
+    /// * `is_hand`: If true, moves using hand pieces (prisoners) are generated.
+    /// * `allow_illegal`: If true, illegal moves (ignoring check) are generated.
+    /// * `check_drop_only`: If true, only hand moves with check are generated.
     pub fn generate_moves_with_option(
         &self,
         is_board: bool,

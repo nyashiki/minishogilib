@@ -30,7 +30,7 @@ const CHANNEL_NUM_PER_HISTORY: usize = 10 + 10 + 3 + 5 + 5;
 const CHANNEL_NUM: usize = CHANNEL_NUM_PER_HISTORY * HISTORY + 2;
 
 impl Position {
-    /// \[チャネル * y座標 * x座標\]の形式で返す
+    /// Return [Channel * Height * Width] formatted array.
     pub fn to_alphazero_input_array(&self, flip: bool) -> [f32; CHANNEL_NUM * SQUARE_NB] {
         let mut input_layer = [0f32; CHANNEL_NUM * SQUARE_NB];
 
