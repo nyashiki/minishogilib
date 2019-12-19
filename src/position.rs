@@ -153,7 +153,7 @@ impl Position {
     }
 
     pub fn get_csa_kif(&self) -> std::vec::Vec<String> {
-        self.kif[0..self.ply as usize].to_vec().into_iter().map(|x| x.csa_sfen()).collect()
+        self.kif[0..self.ply as usize].to_vec().into_iter().map(|x| x.csa()).collect()
     }
 
     /// Set the position by sfen string.

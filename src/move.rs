@@ -37,7 +37,7 @@ impl Move {
         }
     }
 
-    pub fn csa_sfen(&self) -> String {
+    pub fn csa(&self) -> String {
         if self.piece == Piece::NO_PIECE {
             return "%TORYO".to_string();
         }
@@ -50,7 +50,7 @@ impl Move {
         if self.is_hand {
             format!(
                 "00{}{}",
-                square_to_csa_sfen(self.to),
+                square_to_csa(self.to),
                 csa_piece[self.piece.get_piece_type().as_usize()]
             )
         } else {
@@ -62,8 +62,8 @@ impl Move {
 
             format!(
                 "{}{}{}",
-                square_to_csa_sfen(self.from),
-                square_to_csa_sfen(self.to),
+                square_to_csa(self.from),
+                square_to_csa(self.to),
                 csa_piece[piece.as_usize()]
             )
         }
@@ -169,7 +169,7 @@ pub fn square_to_sfen(square: usize) -> String {
     )
 }
 
-pub fn square_to_csa_sfen(square: usize) -> String {
+pub fn square_to_csa(square: usize) -> String {
     format!(
         "{}{}",
         "54321".as_bytes()[square % 5 as usize] as char,
