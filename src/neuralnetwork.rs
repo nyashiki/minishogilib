@@ -146,28 +146,22 @@ impl Move {
 
         let index = if self.is_hand {
             if c == Color::WHITE {
-                (64 + self.get_hand_index(), self.to)
+                (50 + self.get_hand_index(), self.to)
             } else {
-                (64 + self.get_hand_index(), SQUARE_NB - 1 - self.to)
+                (50 + self.get_hand_index(), SQUARE_NB - 1 - self.to)
             }
         } else {
-            let (direction, amount) = get_relation(self.from, self.to);
-            assert!(amount > 0);
-
             if self.get_promotion() {
                 if c == Color::WHITE {
-                    (32 + 4 * direction as usize + amount - 1, self.from)
+                    (25 + self.to, self.from)
                 } else {
-                    (
-                        32 + 4 * ((direction as usize + 4) % 8) + amount - 1,
-                        SQUARE_NB - 1 - self.from,
-                    )
+                    (25 + (SQUARE_NB - 1 - self.to), (SQUARE_NB - 1 - self.from))
                 }
             } else {
                 if c == Color::WHITE {
-                    (4 * direction as usize + amount - 1, self.from)
+                    (self.to, self.from)
                 } else {
-                    (4 * ((direction as usize + 4) % 8) + amount - 1, SQUARE_NB - 1 - self.from)
+                    (SQUARE_NB - 1 - self.to, SQUARE_NB - 1 - self.from)
                 }
             }
         };
@@ -180,13 +174,13 @@ impl Move {
 fn index_to_move(position: &Position, index: usize) -> Move {
     let mut moves: std::vec::Vec<Move> = Vec::new();
 
-    if index >= 64 * 25 {
+    if index >= 50 * 25 {
         for i in 0..5 {
             for j in 0..SQUARE_NB {
                 let temp = if position.side_to_move == Color::WHITE {
-                    (64 + i) * 25 + j
+                    (50 + i) * 25 + j
                 } else {
-                    (64 + i) * 25 + (SQUARE_NB - j - 1)
+                    (50 + i) * 25 + (SQUARE_NB - j - 1)
                 };
 
                 if temp == index {
@@ -198,26 +192,23 @@ fn index_to_move(position: &Position, index: usize) -> Move {
             }
         }
     } else {
-        for direction in 0..8 {
-            for amount in 0..4 {
-                for i in 0..SQUARE_NB {
-                    for promotion in 0..2 {
-                        let temp = if position.side_to_move == Color::WHITE {
-                            (32 * promotion + ((direction * 4) + amount)) * 25 + i
-                        } else {
-                            (32 * promotion + ((((direction + 4) % 8) * 4) + amount)) * 25
-                                + (SQUARE_NB - i - 1)
-                        };
+        for to in 0..SQUARE_NB {
+            for from in 0..SQUARE_NB {
+                for promotion in 0..2 {
+                    let temp = if position.side_to_move == Color::WHITE {
+                        (25 * promotion + to) * 25 + from
+                    } else {
+                        (25 * promotion + (SQUARE_NB - 1 - to)) * 25 + (SQUARE_NB - 1 - from)
+                    };
 
-                        if temp == index {
-                            moves.push(Move::board_move(
-                                Piece::NO_PIECE,
-                                i,
-                                0,
-                                promotion != 0,
-                                Piece::NO_PIECE,
-                            ));
-                        }
+                    if temp == index {
+                        moves.push(Move::board_move(
+                            Piece::NO_PIECE,
+                            from,
+                            to,
+                            promotion != 0,
+                            Piece::NO_PIECE,
+                        ));
                     }
                 }
             }
@@ -252,6 +243,7 @@ fn to_policy_index_test() {
                     assert_eq!(m.to, move_from_index.to);
                 } else {
                     assert_eq!(m.from, move_from_index.from);
+                    assert_eq!(m.to, move_from_index.to);
                     assert_eq!(m.promotion, move_from_index.promotion);
                 }
             }
