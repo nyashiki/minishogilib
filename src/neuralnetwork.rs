@@ -196,7 +196,7 @@ fn index_to_move(position: &Position, index: usize) -> Move {
             for from in 0..SQUARE_NB {
                 for promotion in 0..2 {
                     let temp = if position.side_to_move == Color::WHITE {
-                        (25 * promotion + to) * 25 + from
+                        (25 * promotion + to) * SQUARE_NB + from
                     } else {
                         (25 * promotion + (SQUARE_NB - 1 - to)) * 25 + (SQUARE_NB - 1 - from)
                     };

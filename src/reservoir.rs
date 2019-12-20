@@ -162,7 +162,7 @@ impl Reservoir {
 
                 let nninput = position.to_alphazero_input_array(flip);
 
-                let mut policy = [0f32; 69 * 5 * 5];
+                let mut policy = [0f32; 55 * 5 * 5];
 
                 // Value.
                 let value = if self.records[index].winner == 2 {
@@ -248,7 +248,7 @@ impl Reservoir {
         let mut ins = std::vec::Vec::with_capacity(
             mini_batch_size * (neuralnetwork::HISTORY * 33 + 2) * SQUARE_NB,
         );
-        let mut policies = std::vec::Vec::with_capacity(mini_batch_size * 69 * SQUARE_NB);
+        let mut policies = std::vec::Vec::with_capacity(mini_batch_size * 55 * SQUARE_NB);
         let mut values = std::vec::Vec::with_capacity(mini_batch_size);
 
         for (_b, batch) in data.iter().enumerate() {
