@@ -81,6 +81,7 @@ impl Reservoir {
         mini_batch_size: usize,
         flat_sampling: bool,
         symmetry: bool,
+        policy_deforming: bool,
     ) -> (Py<PyArray1<f32>>, Py<PyArray1<f32>>, Py<PyArray1<f32>>) {
         let mut cumulative_plys = vec![0; self.max_size + 1];
 
@@ -162,19 +163,6 @@ impl Reservoir {
                 let nninput = position.to_alphazero_input_array(flip);
 
                 let mut policy = [0f32; 69 * 5 * 5];
-                // Policy.
-                let (sum_n, q, playouts) = &self.records[index].mcts_result[ply];
-
-                for playout in playouts {
-                    let mut m = position.sfen_to_move(&playout.0);
-                    let n = playout.1;
-
-                    if flip {
-                        m = m.flip();
-                    }
-
-                    policy[m.to_policy_index()] = n as f32 / *sum_n as f32;
-                }
 
                 // Value.
                 let value = if self.records[index].winner == 2 {
@@ -185,10 +173,73 @@ impl Reservoir {
                     -1.0
                 };
 
-                /*
-                let scaled_q = q * 2.0 - 1.0;
-                let value = 0.5 * value + 0.5 * scaled_q;
-                */
+                // Policy.
+                let (sum_n, _q, playouts) = &self.records[index].mcts_result[ply];
+
+                if policy_deforming && value != 0.0 {
+                    if value == 1.0 {
+                        let mut min_playout: u32 = std::u32::MAX;
+                        let mut max_playout: u32 = 0;
+
+                        for playout in playouts {
+                            min_playout = std::cmp::min(min_playout, playout.1);
+                            max_playout = std::cmp::max(max_playout, playout.1);
+                        }
+
+                        let sum_n = *sum_n - (min_playout - 1) * (playouts.len() - 1) as u32;
+
+                        for playout in playouts {
+                            let mut m = position.sfen_to_move(&playout.0);
+                            let n = if playout.1 == max_playout {
+                                playout.1
+                            } else {
+                                playout.1 - (min_playout - 1)
+                            };
+
+                            if flip {
+                                m = m.flip();
+                            }
+
+                            policy[m.to_policy_index()] = n as f32 / sum_n as f32;
+                        }
+                    } else if value == -1.0 {
+                        let mut max_playout: u32 = 0;
+
+                        for playout in playouts {
+                            max_playout = std::cmp::max(max_playout, playout.1);
+                        }
+
+                        let mut diff = std::u32::MAX;
+                        for playout in playouts {
+                            diff = std::cmp::min(diff, max_playout - playout.1);
+                        }
+
+                        let sum_n = *sum_n - diff;
+
+                        for playout in playouts {
+                            let mut m = position.sfen_to_move(&playout.0);
+                            let n =
+                                if playout.1 == max_playout { playout.1 - diff } else { playout.1 };
+
+                            if flip {
+                                m = m.flip();
+                            }
+
+                            policy[m.to_policy_index()] = n as f32 / sum_n as f32;
+                        }
+                    }
+                } else {
+                    for playout in playouts {
+                        let mut m = position.sfen_to_move(&playout.0);
+                        let n = playout.1;
+
+                        if flip {
+                            m = m.flip();
+                        }
+
+                        policy[m.to_policy_index()] = n as f32 / *sum_n as f32;
+                    }
+                }
 
                 (nninput, policy, value)
             })
