@@ -134,7 +134,8 @@ impl Position {
 #[pymethods]
 impl Position {
     pub fn to_alphazero_input(&self, py: Python) -> Py<PyArray1<f32>> {
-        return PyArray1::from_slice(py, &self.to_alphazero_input_array(false)).to_owned();
+        let array = py.allow_threads(move || self.to_alphazero_input_array(false));
+        return PyArray1::from_slice(py, &array).to_owned();
     }
 }
 
