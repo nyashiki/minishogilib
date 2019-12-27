@@ -904,7 +904,7 @@ impl Position {
 
             while player_bb != 0 {
                 let i = get_square(player_bb);
-                player_bb ^= 1 << i;
+                player_bb &= player_bb - 1;
 
                 // 両王手がかかっているときは，玉を逃げる以外は非合法手
                 if !allow_illegal
@@ -932,7 +932,7 @@ impl Position {
                             && self.board[i].get_piece_type() != PieceType::KING
                             && (self.adjacent_check_bb[self.ply as usize] & (1 << move_to)) == 0
                         {
-                            move_tos ^= 1 << move_to;
+                            move_tos &= move_tos - 1;
                             continue;
                         }
 
@@ -968,7 +968,7 @@ impl Position {
                             ));
                         }
 
-                        move_tos ^= 1 << move_to;
+                        move_tos &= move_tos - 1;
                     }
                 }
 
@@ -991,7 +991,7 @@ impl Position {
                             && self.board[i].get_piece_type() != PieceType::KING
                             && (self.adjacent_check_bb[self.ply as usize] & (1 << move_to)) == 0
                         {
-                            move_tos ^= 1 << move_to;
+                            move_tos &= move_tos - 1;
                             continue;
                         }
 
@@ -1021,7 +1021,7 @@ impl Position {
                             ));
                         }
 
-                        move_tos ^= 1 << move_to;
+                        move_tos &= move_tos - 1;
                     }
                 }
                 // 飛、龍
@@ -1039,7 +1039,7 @@ impl Position {
                             && self.board[i].get_piece_type() != PieceType::KING
                             && (self.adjacent_check_bb[self.ply as usize] & (1 << move_to)) == 0
                         {
-                            move_tos ^= 1 << move_to;
+                            move_tos &= move_tos - 1;
                             continue;
                         }
 
@@ -1069,7 +1069,7 @@ impl Position {
                             ));
                         }
 
-                        move_tos ^= 1 << move_to;
+                        move_tos &= move_tos - 1;
                     }
                 }
             }
@@ -1116,7 +1116,7 @@ impl Position {
 
                     while empty_squares != 0 {
                         let target = get_square(empty_squares);
-                        empty_squares ^= 1 << target;
+                        empty_squares &= empty_squares - 1;
 
                         // 二歩は禁じ手
                         if *piece_type == PieceType::PAWN
