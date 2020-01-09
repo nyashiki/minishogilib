@@ -561,18 +561,20 @@ impl Position {
     /// Whether the position is now under the repetition (sennitite).
     ///
     /// Returns:
-    /// * `(repetition, check_repetition)`: If `check_repetition` is true,
+    /// * `(repetition, my_check_repetition, op_check_repetition)`:
+    ///                                     If `check_repetition` is true,
     ///                                     the one side has continued check moves which means
     ///                                     immediate the other side's win.
-    pub fn is_repetition(&self) -> (bool, bool) {
+    pub fn is_repetition(&self) -> (bool, bool, bool) {
         if self.ply == 0 {
-            return (false, false);
+            return (false, false, false);
         }
 
         let mut count = 0;
 
         let mut ply = self.ply as i32 - 4;
-        let mut check_repetition = false;
+        let mut my_check_repetition = false;
+        let mut op_check_repetition = false;
 
         while ply >= 0 {
             if self.hash[ply as usize] == self.hash[self.ply as usize] {
@@ -581,24 +583,28 @@ impl Position {
                 if count == 1 {
                     if self.sequent_check_count[self.ply as usize][self.side_to_move.as_usize()]
                         >= (self.ply + 1 - ply as u16) as u8 / 2
-                        || self.sequent_check_count[self.ply as usize]
-                            [self.side_to_move.get_op_color().as_usize()]
-                            >= (self.ply + 1 - ply as u16) as u8 / 2
                     {
-                        check_repetition = true;
+                        my_check_repetition = true;
+                    }
+
+                    if self.sequent_check_count[self.ply as usize]
+                        [self.side_to_move.get_op_color().as_usize()]
+                        >= (self.ply + 1 - ply as u16) as u8 / 2
+                    {
+                        op_check_repetition = true;
                     }
                 }
             }
 
             // 現在の局面の1手前から数え始めているので、3回 (+ 現在の局面 1回) で千日手
             if count == 3 {
-                return (true, check_repetition);
+                return (true, my_check_repetition, op_check_repetition);
             }
 
             ply -= 2; // 繰り返し回数は、同じ手番の過去局面だけを見れば良い
         }
 
-        return (false, false);
+        return (false, false, false);
     }
 
     /// Return the number of repetition.
@@ -1828,28 +1834,37 @@ fn is_repetition_test() {
     static REPETITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a";
     static REPETITION_SFEN2: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 3e2d 3a4b 2e3d 2a2b 4e4d 4a3b 5e4e 5a4a 3d5b 4a5a 5b3d 5a4a 3d5b 4a5a 5b2e 5a4a 2e5b 4a5a 5b3d 5a4a 3d5b";
     static CHECK_REPETITION_SFEN: &str = "2k2/5/5/5/2K2 b R 1 moves R*3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c";
+    static CHECK_REPETITION_SFEN2: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 4e4d 4a3b 2e3d 3a2b 3e2d 5a4a 5d5c 4a4b 5c5b 4b4d 5e4d G*1d 1e1d 3b1d R*1e 1d3b G*4b R*5d 4d4e 5d3d 4e3d B*3a 4b3b 2a3b 1e1b 1a1b R*1e 1b2a B*1b 2a1a 1b2c 1a2a 2c1b 2a1a 1b2c 1a2a 2c1b 2a1a 1b2c 1a2a 2c1b";
     static NOT_REPETITION_SFEN: &str =
         "rbsgk/4p/5/P4/KGSBR b - 1 moves 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a";
+    static CHECK_REPETITION_SFEN3: &str =
+        "3k1/5/2R2/5/2K2 b - 1 moves 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a";
     static NOT_CHECK_REPETITION_SFEN: &str =
         "2k2/5/5/5/2K2 b R 1 moves R*3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a";
 
     position.set_sfen(START_POSITION_SFEN);
-    assert_eq!(position.is_repetition(), (false, false));
+    assert_eq!(position.is_repetition(), (false, false, false));
 
     position.set_sfen(REPETITION_SFEN);
-    assert_eq!(position.is_repetition(), (true, false));
+    assert_eq!(position.is_repetition(), (true, false, false));
 
     position.set_sfen(REPETITION_SFEN2);
-    assert_eq!(position.is_repetition(), (true, false));
+    assert_eq!(position.is_repetition(), (true, false, false));
 
     position.set_sfen(CHECK_REPETITION_SFEN);
-    assert_eq!(position.is_repetition(), (true, true));
+    assert_eq!(position.is_repetition(), (true, false, true));
+
+    position.set_sfen(CHECK_REPETITION_SFEN2);
+    assert_eq!(position.is_repetition(), (true, false, true));
+
+    position.set_sfen(CHECK_REPETITION_SFEN3);
+    assert_eq!(position.is_repetition(), (true, true, false));
 
     position.set_sfen(NOT_REPETITION_SFEN);
-    assert_eq!(position.is_repetition(), (false, false));
+    assert_eq!(position.is_repetition(), (false, false, false));
 
     position.set_sfen(NOT_CHECK_REPETITION_SFEN);
-    assert_eq!(position.is_repetition(), (false, false));
+    assert_eq!(position.is_repetition(), (false, false, false));
 }
 
 #[test]

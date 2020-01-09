@@ -347,7 +347,7 @@ impl MCTS {
             legal_policy_sum += (policy[m.to_policy_index()] - policy_max).exp();
         }
 
-        let (is_repetition, is_check_repetition) = position.is_repetition();
+        let (is_repetition, my_check_repetition, op_check_repetition) = position.is_repetition();
 
         if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
             self.game_tree[node].is_terminal = true;
@@ -355,8 +355,10 @@ impl MCTS {
 
         // Win or lose is determined by the game rule.
         if self.game_tree[node].is_terminal {
-            if is_check_repetition {
+            if my_check_repetition {
                 value = 0.0;
+            } else if op_check_repetition {
+                value = 1.0;
             } else if is_repetition {
                 value = if position.side_to_move == Color::WHITE { 0.0 } else { 1.0 }
             } else if position.ply == MAX_PLY as u16 {
