@@ -363,17 +363,20 @@ impl MCTS {
                 value = if position.side_to_move == Color::WHITE { 0.0 } else { 1.0 }
             } else if position.ply == MAX_PLY as u16 {
                 value = 0.5;
-            } else {
-                value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
-                    == PieceType::PAWN
-                {
-                    // Checkmate by dropping a pawn.
-                    1.0
-                } else {
-                    // Checkmate.
-                    0.0
-                };
             }
+        }
+
+        if moves.len() == 0 {
+            value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
+                == PieceType::PAWN
+                && position.kif[position.ply as usize - 1].is_hand
+            {
+                // Checkmate by dropping a pawn.
+                1.0
+            } else {
+                // Checkmate.
+                0.0
+            };
         }
 
         // Set policy and vaue.
