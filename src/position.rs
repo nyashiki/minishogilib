@@ -6,22 +6,36 @@ use bitboard::*;
 use r#move::*;
 use types::*;
 
+/// A position is represented here.
 #[pyclass(module = "minishogilib")]
 #[derive(Copy, Clone)]
 pub struct Position {
+    /// Which player to move.
     pub side_to_move: Color,
+    /// The array of the board.
     pub board: [Piece; SQUARE_NB],
+    /// The array of hand pieces (prisoners).
     pub hand: [[u8; 5]; 2],
+    /// The number of plies.
     pub ply: u16,
+
+    /// Move history.
     pub kif: [Move; MAX_PLY + 1],
+    /// The hash value of positions (including history positions).
     pub hash: [(u64, u64); MAX_PLY + 1],
 
+    /// The bitwise pawn flags that is used not to generate double-pawn (2fu) moves.
     pub pawn_flags: [u8; 2],
+    /// The bitboard for each piece.
     pub piece_bb: [Bitboard; Piece::B_PAWN_X.as_usize() + 1],
+    /// The bitboard for each player.
     pub player_bb: [Bitboard; 2],
-    pub adjacent_check_bb: [Bitboard; MAX_PLY + 1], // 近接駒による王手を表すbitboard
-    pub long_check_bb: [Bitboard; MAX_PLY + 1],     /* 長い利きを持つ駒による王手を表すbitboard */
-    pub sequent_check_count: [[i8; 2]; MAX_PLY + 1],
+    /// The bitboard of pieces which are checking by neighbors.
+    pub adjacent_check_bb: [Bitboard; MAX_PLY + 1],
+    /// The bitboard of pieces which are checking not by neighbors.
+    pub long_check_bb: [Bitboard; MAX_PLY + 1],
+    /// The number of sequential check (including history positions).
+    pub sequent_check_count: [[u8; 2]; MAX_PLY + 1],
 }
 
 #[pymethods]
@@ -40,7 +54,10 @@ impl Position {
         Ok(())
     }
 
-    /// entireがTrueの時には，過去の棋譜もコピーする
+    /// Copy the `position`
+    ///
+    /// Arguments:
+    /// * `entire`: If true, historical positions are also copied.
     pub fn copy(&self, entire: bool) -> Position {
         if entire {
             return *self;
@@ -71,6 +88,7 @@ impl Position {
         return position;
     }
 
+    /// Output the position.
     pub fn print(&self) {
         println!("side_to_move: {:?}", self.side_to_move);
 
@@ -105,6 +123,7 @@ impl Position {
         println!("repetition: {}", self.get_repetition());
     }
 
+    /// Return the sfen representation of the position.
     pub fn sfen(&self, history: bool) -> String {
         if history {
             let mut position = *self;
@@ -134,9 +153,14 @@ impl Position {
     }
 
     pub fn get_csa_kif(&self) -> std::vec::Vec<String> {
-        self.kif[0..self.ply as usize].to_vec().into_iter().map(|x| x.csa_sfen()).collect()
+        self.kif[0..self.ply as usize].to_vec().into_iter().map(|x| x.csa()).collect()
     }
 
+    /// Set the position by sfen string.
+    ///
+    /// Arguments:
+    /// * `sfen`: The sfen representation of a position.
+    /// * `incremental_update`: If false, historical variables (check bitboards, etc...) are not set.
     pub fn _set_sfen_with_option(&mut self, sfen: &str, incremental_update: bool) {
         // 初期化
         for i in 0..SQUARE_NB {
@@ -240,19 +264,23 @@ impl Position {
         }
     }
 
+    /// Set a position by the sfen.
     pub fn set_sfen(&mut self, sfen: &str) {
         self._set_sfen_with_option(sfen, true);
     }
 
+    /// Set a position by the sfen, ignoring historical positions.
     pub fn set_sfen_simple(&mut self, sfen: &str) {
         self._set_sfen_with_option(sfen, false);
         self.set_flags();
     }
 
+    /// Set the position to the initial position.
     pub fn set_start_position(&mut self) {
         self.set_sfen_without_startpos("");
     }
 
+    /// Set the position by sfen consisted only by moves.
     pub fn set_sfen_without_startpos(&mut self, sfen: &str) {
         static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
         let sfen_kif = format!("{} moves {}", START_POSITION_SFEN, sfen);
@@ -260,6 +288,7 @@ impl Position {
         self.set_sfen(&sfen_kif);
     }
 
+    /// Set the position by sfen consisted only by moves, ignoring historical positions.
     pub fn set_sfen_without_startpos_simple(&mut self, sfen: &str) {
         static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
         let sfen_kif = format!("{} moves {}", START_POSITION_SFEN, sfen);
@@ -267,7 +296,7 @@ impl Position {
         self.set_sfen_simple(&sfen_kif);
     }
 
-    /// sfen形式での指し手をMove構造体に変換する
+    /// Convert a sfen represented move to a `Move` struct instance.
     pub fn sfen_to_move(&self, sfen: &str) -> Move {
         if sfen.as_bytes()[1] as char == '*' {
             let piece = char_to_piece(sfen.as_bytes()[0] as char)
@@ -295,14 +324,19 @@ impl Position {
         return self.ply;
     }
 
+    /// Generate legal moves.
+    ///
+    /// Note: A move that cause immediate checkmate by a pawn (Utifu-dume) is included.
     pub fn generate_moves(&self) -> std::vec::Vec<Move> {
         return self.generate_moves_with_option(true, true, false, false);
     }
 
+    /// Whether the king is in check.
     pub fn is_in_check(&self) -> bool {
         return self.get_check_bb() != 0;
     }
 
+    /// Set bitboards, etc...
     pub fn set_flags(&mut self) {
         self.pawn_flags = [0; 2];
         self.piece_bb = [0; Piece::B_PAWN_X.as_usize() + 1];
@@ -327,6 +361,11 @@ impl Position {
         self.set_check_bb();
     }
 
+    /// Do a move.
+    ///
+    /// Arguments:
+    /// * `move`: The move to do.
+    /// * `incremental_update`: If false, historical variables (check bitboards, etc...) are not set.
     pub fn _do_move_with_option(&mut self, m: &Move, incremental_update: bool) {
         assert!(m.capture_piece.get_piece_type() != PieceType::KING);
 
@@ -452,10 +491,12 @@ impl Position {
         }
     }
 
+    /// Do a move.
     pub fn do_move(&mut self, m: &Move) {
         self._do_move_with_option(m, true);
     }
 
+    /// Undo the move.
     pub fn undo_move(&mut self) {
         assert!(self.ply > 0);
 
@@ -517,45 +558,60 @@ impl Position {
         }
     }
 
-    /// 千日手かどうかを返す
-    /// (千日手かどうか, 連続王手の千日手かどうか)
-    pub fn is_repetition(&self) -> (bool, bool) {
+    /// Whether the position is now under the repetition (sennitite).
+    ///
+    /// Returns:
+    /// * `(repetition, my_check_repetition, op_check_repetition)`:
+    ///                                     If `check_repetition` is true,
+    ///                                     the one side has continued check moves which means
+    ///                                     immediate the other side's win.
+    pub fn is_repetition(&self) -> (bool, bool, bool) {
         if self.ply == 0 {
-            return (false, false);
+            return (false, false, false);
         }
 
         let mut count = 0;
 
-        let mut ply = self.ply as i32 - 2;
+        let mut ply = self.ply as i32 - 4;
+        let mut my_check_repetition = false;
+        let mut op_check_repetition = false;
+
         while ply >= 0 {
             if self.hash[ply as usize] == self.hash[self.ply as usize] {
                 count += 1;
+
+                if count == 1 {
+                    if self.sequent_check_count[self.ply as usize][self.side_to_move.as_usize()]
+                        >= (self.ply + 1 - ply as u16) as u8 / 2
+                    {
+                        my_check_repetition = true;
+                    }
+
+                    if self.sequent_check_count[self.ply as usize]
+                        [self.side_to_move.get_op_color().as_usize()]
+                        >= (self.ply + 1 - ply as u16) as u8 / 2
+                    {
+                        op_check_repetition = true;
+                    }
+                }
             }
 
-            // 現在の局面の1手前から数え始めているので、3回(+現在の局面 1回)で千日手
+            // 現在の局面の1手前から数え始めているので、3回 (+ 現在の局面 1回) で千日手
             if count == 3 {
-                // 連続王手
-                if self.sequent_check_count[self.ply as usize]
-                    [self.side_to_move.get_op_color().as_usize()]
-                    >= 7
-                {
-                    return (true, true);
-                }
-
-                return (true, false);
+                return (true, my_check_repetition, op_check_repetition);
             }
 
             ply -= 2; // 繰り返し回数は、同じ手番の過去局面だけを見れば良い
         }
 
-        return (false, false);
+        return (false, false, false);
     }
 
-    /// 現在の局面がこれまでに何回出てきたかを返す
+    /// Return the number of repetition.
     pub fn get_repetition(&self) -> usize {
         let mut count: usize = 0;
 
-        let mut ply = self.ply as i32 - 2;
+        let mut ply = self.ply as i32 - 4;
         while ply >= 0 {
             if self.hash[ply as usize] == self.hash[self.ply as usize] {
                 count += 1;
@@ -567,6 +623,7 @@ impl Position {
         return count;
     }
 
+    /// Output a SVG format image.
     pub fn to_svg(&self) -> String {
         // ToDo:
         //   color_last_move: bool
@@ -645,6 +702,7 @@ impl Position {
 }
 
 impl Position {
+    /// Generate an empty board instance.
     pub fn empty_board() -> Position {
         Position {
             side_to_move: Color::NO_COLOR,
@@ -662,7 +720,7 @@ impl Position {
         }
     }
 
-    /// 盤上の駒からbitboardを設定する
+    /// Set bitboards.
     fn set_bitboard(&mut self) {
         // 初期化
         for i in 0..Piece::B_PAWN_X.as_usize() + 1 {
@@ -680,6 +738,7 @@ impl Position {
         }
     }
 
+    /// Set check bitboards.
     fn set_check_bb(&mut self) {
         self.adjacent_check_bb[self.ply as usize] = 0;
         self.long_check_bb[self.ply as usize] = 0;
@@ -719,6 +778,7 @@ impl Position {
                 [PieceType::ROOK_X.get_piece(self.side_to_move.get_op_color()).as_usize()];
     }
 
+    /// Calculate the hash from scratch.
     fn calculate_hash(&self) -> (u64, u64) {
         let mut hash: u64 = 0;
 
@@ -743,6 +803,7 @@ impl Position {
         return (hash, hand_hash);
     }
 
+    /// Get the hash.
     fn get_hash(&self) -> (u64, u64) {
         return self.hash[self.ply as usize];
     }
@@ -759,6 +820,7 @@ impl Position {
         return self.get_adjacent_check_bb() | self.get_long_check_bb();
     }
 
+    /// Get the sfen representation of the position.
     pub fn get_sfen_position(&self) -> String {
         let mut sfen_position = String::new();
 
@@ -827,6 +889,13 @@ impl Position {
         return sfen_position;
     }
 
+    /// Generate legal moves.
+    ///
+    /// Arguments:
+    /// * `is_board`: If true, moves whose from position is on board are generated.
+    /// * `is_hand`: If true, moves using hand pieces (prisoners) are generated.
+    /// * `allow_illegal`: If true, illegal moves (ignoring check) are generated.
+    /// * `check_drop_only`: If true, only hand moves with check are generated.
     pub fn generate_moves_with_option(
         &self,
         is_board: bool,
@@ -841,7 +910,7 @@ impl Position {
 
             while player_bb != 0 {
                 let i = get_square(player_bb);
-                player_bb ^= 1 << i;
+                player_bb &= player_bb - 1;
 
                 // 両王手がかかっているときは，玉を逃げる以外は非合法手
                 if !allow_illegal
@@ -869,7 +938,7 @@ impl Position {
                             && self.board[i].get_piece_type() != PieceType::KING
                             && (self.adjacent_check_bb[self.ply as usize] & (1 << move_to)) == 0
                         {
-                            move_tos ^= 1 << move_to;
+                            move_tos &= move_tos - 1;
                             continue;
                         }
 
@@ -905,7 +974,7 @@ impl Position {
                             ));
                         }
 
-                        move_tos ^= 1 << move_to;
+                        move_tos &= move_tos - 1;
                     }
                 }
 
@@ -928,7 +997,7 @@ impl Position {
                             && self.board[i].get_piece_type() != PieceType::KING
                             && (self.adjacent_check_bb[self.ply as usize] & (1 << move_to)) == 0
                         {
-                            move_tos ^= 1 << move_to;
+                            move_tos &= move_tos - 1;
                             continue;
                         }
 
@@ -958,7 +1027,7 @@ impl Position {
                             ));
                         }
 
-                        move_tos ^= 1 << move_to;
+                        move_tos &= move_tos - 1;
                     }
                 }
                 // 飛、龍
@@ -976,7 +1045,7 @@ impl Position {
                             && self.board[i].get_piece_type() != PieceType::KING
                             && (self.adjacent_check_bb[self.ply as usize] & (1 << move_to)) == 0
                         {
-                            move_tos ^= 1 << move_to;
+                            move_tos &= move_tos - 1;
                             continue;
                         }
 
@@ -1006,7 +1075,7 @@ impl Position {
                             ));
                         }
 
-                        move_tos ^= 1 << move_to;
+                        move_tos &= move_tos - 1;
                     }
                 }
             }
@@ -1053,7 +1122,7 @@ impl Position {
 
                     while empty_squares != 0 {
                         let target = get_square(empty_squares);
-                        empty_squares ^= 1 << target;
+                        empty_squares &= empty_squares - 1;
 
                         // 二歩は禁じ手
                         if *piece_type == PieceType::PAWN
@@ -1765,29 +1834,37 @@ fn is_repetition_test() {
     static REPETITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a";
     static REPETITION_SFEN2: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 3e2d 3a4b 2e3d 2a2b 4e4d 4a3b 5e4e 5a4a 3d5b 4a5a 5b3d 5a4a 3d5b 4a5a 5b2e 5a4a 2e5b 4a5a 5b3d 5a4a 3d5b";
     static CHECK_REPETITION_SFEN: &str = "2k2/5/5/5/2K2 b R 1 moves R*3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c";
+    static CHECK_REPETITION_SFEN2: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 4e4d 4a3b 2e3d 3a2b 3e2d 5a4a 5d5c 4a4b 5c5b 4b4d 5e4d G*1d 1e1d 3b1d R*1e 1d3b G*4b R*5d 4d4e 5d3d 4e3d B*3a 4b3b 2a3b 1e1b 1a1b R*1e 1b2a B*1b 2a1a 1b2c 1a2a 2c1b 2a1a 1b2c 1a2a 2c1b 2a1a 1b2c 1a2a 2c1b";
+    static CHECK_REPETITION_SFEN3: &str =
+        "3k1/5/2R2/5/2K2 b - 1 moves 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a";
     static NOT_REPETITION_SFEN: &str =
         "rbsgk/4p/5/P4/KGSBR b - 1 moves 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a";
     static NOT_CHECK_REPETITION_SFEN: &str =
         "2k2/5/5/5/2K2 b R 1 moves R*3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a";
 
     position.set_sfen(START_POSITION_SFEN);
-    assert_eq!(position.is_repetition(), (false, false));
+    assert_eq!(position.is_repetition(), (false, false, false));
 
     position.set_sfen(REPETITION_SFEN);
-    assert_eq!(position.is_repetition(), (true, false));
+    assert_eq!(position.is_repetition(), (true, false, false));
 
     position.set_sfen(REPETITION_SFEN2);
-    position.print();
-    assert_eq!(position.is_repetition(), (true, false));
+    assert_eq!(position.is_repetition(), (true, false, false));
 
     position.set_sfen(CHECK_REPETITION_SFEN);
-    assert_eq!(position.is_repetition(), (true, true));
+    assert_eq!(position.is_repetition(), (true, false, true));
+
+    position.set_sfen(CHECK_REPETITION_SFEN2);
+    assert_eq!(position.is_repetition(), (true, false, true));
+
+    position.set_sfen(CHECK_REPETITION_SFEN3);
+    assert_eq!(position.is_repetition(), (true, true, false));
 
     position.set_sfen(NOT_REPETITION_SFEN);
-    assert_eq!(position.is_repetition(), (false, false));
+    assert_eq!(position.is_repetition(), (false, false, false));
 
     position.set_sfen(NOT_CHECK_REPETITION_SFEN);
-    assert_eq!(position.is_repetition(), (false, false));
+    assert_eq!(position.is_repetition(), (false, false, false));
 }
 
 #[test]

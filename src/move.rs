@@ -37,7 +37,7 @@ impl Move {
         }
     }
 
-    pub fn csa_sfen(&self) -> String {
+    pub fn csa(&self) -> String {
         if self.piece == Piece::NO_PIECE {
             return "%TORYO".to_string();
         }
@@ -50,7 +50,7 @@ impl Move {
         if self.is_hand {
             format!(
                 "00{}{}",
-                square_to_csa_sfen(self.to),
+                square_to_csa(self.to),
                 csa_piece[self.piece.get_piece_type().as_usize()]
             )
         } else {
@@ -62,8 +62,8 @@ impl Move {
 
             format!(
                 "{}{}{}",
-                square_to_csa_sfen(self.from),
-                square_to_csa_sfen(self.to),
+                square_to_csa(self.from),
+                square_to_csa(self.to),
                 csa_piece[piece.as_usize()]
             )
         }
@@ -128,6 +128,28 @@ impl Move {
             capture_piece: Piece::NO_PIECE,
         }
     }
+
+    pub fn flip(&self) -> Move {
+        let mut m = *self;
+
+        if !self.is_hand {
+            m.from = {
+                let y = self.from / 5;
+                let x = 4 - self.from % 5;
+
+                y * 5 + x
+            };
+        }
+
+        m.to = {
+            let y = self.to / 5;
+            let x = 4 - self.to % 5;
+
+            y * 5 + x
+        };
+
+        return m;
+    }
 }
 
 pub static NULL_MOVE: Move = Move {
@@ -147,7 +169,7 @@ pub fn square_to_sfen(square: usize) -> String {
     )
 }
 
-pub fn square_to_csa_sfen(square: usize) -> String {
+pub fn square_to_csa(square: usize) -> String {
     format!(
         "{}{}",
         "54321".as_bytes()[square % 5 as usize] as char,
@@ -213,4 +235,26 @@ fn get_relation_test() {
     assert_eq!(get_relation(4, 0), (Direction::W, 4));
 
     assert_eq!(get_relation(21, 9), (Direction::NE, 3));
+}
+
+#[test]
+fn flip_test() {
+    {
+        let m = Move::board_move(Piece::NO_PIECE, 20, 15, false, Piece::NO_PIECE).flip();
+        assert_eq!(m.from, 24);
+        assert_eq!(m.to, 19);
+    }
+
+    {
+        let m = Move::board_move(Piece::NO_PIECE, 23, 11, false, Piece::NO_PIECE).flip();
+        assert_eq!(m.from, 21);
+        assert_eq!(m.to, 13);
+    }
+
+    {
+        let m = Move::hand_move(Piece::NO_PIECE, 15).flip();
+
+        assert_eq!(m.from, 0);
+        assert_eq!(m.to, 19);
+    }
 }

@@ -6,6 +6,10 @@ use types::*;
 
 #[pymethods]
 impl Position {
+    /// Solve checkmate by the Depth First Search algorithm.
+    ///
+    /// Arguments:
+    /// * `depth`: The depth to search.
     pub fn solve_checkmate_dfs(&mut self, depth: i32) -> (bool, Move) {
         for i in (1..depth + 1).step_by(2) {
             let (checkmate, m) = attack(self, i as i32);
@@ -39,10 +43,10 @@ fn attack(position: &mut Position, depth: i32) -> (bool, Move) {
             continue;
         }
 
-        let (repetition, check_repetition) = position.is_repetition();
+        let (repetition, my_check_repetition, op_check_repetition) = position.is_repetition();
 
         if repetition {
-            if !check_repetition && position.side_to_move == Color::WHITE {
+            if !my_check_repetition && position.side_to_move == Color::WHITE {
                 position.undo_move();
                 return (true, *m);
             }
@@ -81,12 +85,13 @@ fn defense(position: &mut Position, depth: i32) -> (bool, Move) {
     for m in &moves {
         position.do_move(m);
 
-        let (repetition, check_repetition) = position.is_repetition();
+        let (repetition, my_check_repetition, op_check_repetition) = position.is_repetition();
+
         if repetition {
             position.undo_move();
 
-            if check_repetition {
-                continue;
+            if op_check_repetition {
+                return (false, NULL_MOVE);
             }
 
             if position.side_to_move == Color::BLACK {

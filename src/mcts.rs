@@ -114,6 +114,7 @@ impl MCTS {
         });
     }
 
+    /// Clear the search tree.
     pub fn clear(&mut self) {
         if self.prev_root != 0 {
             self.eliminate_except(self.prev_root, 0);
@@ -124,6 +125,11 @@ impl MCTS {
         self.prev_root = 0;
     }
 
+    /// Set the root node in the search tree.
+    ///
+    /// Arguments:
+    /// * `position`: The target position.
+    /// * `reuse`: Whether reuse the search tree if available.
     pub fn set_root(&mut self, position: &Position, reuse: bool) -> usize {
         if reuse && self.game_tree[self.prev_root].is_used && position.ply > 0 {
             let last_move = position.kif[position.ply as usize - 1];
@@ -157,29 +163,32 @@ impl MCTS {
         return 1;
     }
 
+    /// Return whether the node has already been expanded or not.
     pub fn expanded(&self, node: usize) -> bool {
         return self.game_tree[node].is_terminal || self.game_tree[node].expanded();
     }
 
+    /// Get the move to the most visited node.
     pub fn best_move(&self, node: usize) -> Move {
         let best_child: usize = self.select_n_max_child(node);
 
         return self.game_tree[best_child].m;
     }
 
+    /// Sample a move to play along the number of visitations for each node.
+    ///
+    /// Note: In AlphaZero and MuZero pseudo-codes, `softmax_sampling` is used.
+    ///       According to the papers, however, `softmax_sampling` doesn't represent the normal Softmax function,
+    ///       and it samples along the number of visitations powered by `temperature`.
+    ///
+    /// Arguments:
+    /// * `node`: The target node.
+    /// * `temperature`: The temperature used to power the number of visitations.
     pub fn softmax_sample(&self, node: usize, temperature: f32) -> Move {
-        let mut visit_max: i32 = 0;
-
-        for child in &self.game_tree[node].children {
-            if self.game_tree[*child].n as i32 > visit_max {
-                visit_max = self.game_tree[*child].n as i32;
-            }
-        }
-
         let mut sum: f32 = 0.0;
 
         for child in &self.game_tree[node].children {
-            sum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp();
+            sum += (self.game_tree[*child].n as f32).powf(1.0 / temperature);
         }
 
         let mut rng = rand::thread_rng();
@@ -188,7 +197,7 @@ impl MCTS {
         let mut cum: f32 = 0.0;
 
         for child in &self.game_tree[node].children {
-            cum += ((self.game_tree[*child].n as i32 - visit_max) as f32 / temperature).exp() / sum;
+            cum += (self.game_tree[*child].n as f32).powf(1.0 / temperature) / sum;
             if r < cum {
                 return self.game_tree[*child].m;
             }
@@ -197,6 +206,49 @@ impl MCTS {
         return self.game_tree[self.game_tree[node].children[0]].m;
     }
 
+    /// Sample a move to play among top moves.
+    ///
+    /// Arguments:
+    /// * `node`: The target node.
+    /// * `away`: If the q value of a children is `away` from that of the best node,
+    ///           the children will be ignored.
+    /// * `temperature`: The temperature used to power the number of visitations.
+    pub fn softmax_sample_among_top_moves(&self, node: usize, away: f32, temperature: f32) -> Move {
+        let best_child: usize = self.select_n_max_child(node);
+        let best_q = 1.0 - self.game_tree[best_child].w / self.game_tree[best_child].n as f32;
+
+        let mut sum: f32 = 0.0;
+
+        for child in &self.game_tree[node].children {
+            let q = 1.0 - self.game_tree[*child].w / self.game_tree[*child].n as f32;
+            if q < best_q - away {
+                continue;
+            }
+
+            sum += (self.game_tree[*child].n as f32).powf(1.0 / temperature);
+        }
+
+        let mut rng = rand::thread_rng();
+        let r: f32 = rng.gen();
+
+        let mut cum: f32 = 0.0;
+
+        for child in &self.game_tree[node].children {
+            let q = 1.0 - self.game_tree[*child].w / self.game_tree[*child].n as f32;
+            if q < best_q - away {
+                continue;
+            }
+
+            cum += (self.game_tree[*child].n as f32).powf(1.0 / temperature) / sum;
+            if r < cum {
+                return self.game_tree[*child].m;
+            }
+        }
+
+        return self.game_tree[self.game_tree[node].children[0]].m;
+    }
+
+    /// Output MCTS searching information.
     pub fn print(&self, root: usize) {
         println!(
             "usage: {:.3}% ({}/{})",
@@ -225,10 +277,17 @@ impl MCTS {
         return self.node_used_count as f32 / self.size as f32;
     }
 
+    /// Get the number of used nodes.
     pub fn get_nodes(&self) -> usize {
         return self.node_used_count;
     }
 
+    /// Select a leaf node with PUCT value.
+    ///
+    /// Arguments:
+    /// * `root_node`: From which selection will start.
+    /// * `position`: The position corresponding the `root_node`.
+    /// * `forced_playouts`: Apply forced playouts rule to selection (See KataGo paper for detail).
     pub fn select_leaf(
         &mut self,
         root_node: usize,
@@ -253,6 +312,15 @@ impl MCTS {
         return node;
     }
 
+    /// Evaluate a node.
+    /// If win or lose is determined by the game rule, the actual outcome (1 for win, -1 for lose, and 0 for draw)
+    /// will be used. Otherwise, the outputs of the neural networks will be used.
+    ///
+    /// Arguments:
+    /// * `node`: The target node.
+    /// * `position`: The position corresponding the target node.
+    /// * `np_policy`: Policy output of the neural networks.
+    /// * `value`: Value output of the neural networks.
     pub fn evaluate(
         &mut self,
         node: usize,
@@ -279,34 +347,39 @@ impl MCTS {
             legal_policy_sum += (policy[m.to_policy_index()] - policy_max).exp();
         }
 
-        let (is_repetition, is_check_repetition) = position.is_repetition();
+        let (is_repetition, my_check_repetition, op_check_repetition) = position.is_repetition();
 
         if is_repetition || moves.len() == 0 || position.ply == MAX_PLY as u16 {
             self.game_tree[node].is_terminal = true;
         }
 
-        // win or lose is determined by the game rule
+        // Win or lose is determined by the game rule.
         if self.game_tree[node].is_terminal {
-            if is_check_repetition {
+            if my_check_repetition {
+                value = 0.0;
+            } else if op_check_repetition {
                 value = 1.0;
             } else if is_repetition {
                 value = if position.side_to_move == Color::WHITE { 0.0 } else { 1.0 }
             } else if position.ply == MAX_PLY as u16 {
                 value = 0.5;
-            } else {
-                value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
-                    == PieceType::PAWN
-                {
-                    // 打ち歩詰め
-                    1.0
-                } else {
-                    // 詰み
-                    0.0
-                };
             }
         }
 
-        // set policy and vaue
+        if moves.len() == 0 {
+            value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
+                == PieceType::PAWN
+                && position.kif[position.ply as usize - 1].is_hand
+            {
+                // Checkmate by dropping a pawn.
+                1.0
+            } else {
+                // Checkmate.
+                0.0
+            };
+        }
+
+        // Set policy and vaue.
         if !self.game_tree[node].is_terminal {
             for m in &moves {
                 let policy_index = m.to_policy_index();
@@ -335,6 +408,10 @@ impl MCTS {
         self.game_tree[node].v = value;
     }
 
+    /// Add dirichlet noise to policy of children at the node.
+    ///
+    /// Arguments:
+    /// * `node`: The target node.
     pub fn add_noise(&mut self, node: usize) {
         let mut noise: std::vec::Vec<f64> = vec![0.0; self.game_tree[node].children.len()];
         let mut noise_sum = 0.0;
@@ -358,6 +435,10 @@ impl MCTS {
         }
     }
 
+    /// Backpropagete a leaf node value from lead nodes to the root node.
+    ///
+    /// Arguments:
+    /// * `leaf_node`: A leaf node.
     pub fn backpropagate(&mut self, leaf_node: usize) {
         let mut node = leaf_node;
         let mut flip = false;
@@ -372,7 +453,11 @@ impl MCTS {
         }
     }
 
-    /// dot言語で探索木を書き出す
+    /// Return the search tree written in dot language.
+    ///
+    /// Arguments:
+    /// * `node`: The target node.
+    /// * `node_num`: The number of nodes that are drawn.
     pub fn visualize(&self, node: usize, node_num: usize) -> String {
         let mut dot = String::new();
 
@@ -437,7 +522,7 @@ impl MCTS {
         return dot;
     }
 
-    /// プレイアウト回数，Q値, それぞれの手の訪問回数を出力する
+    /// Return a tuple of (the number of playout, Q value, list of the number of visitations).
     pub fn dump(
         &mut self,
         node: usize,
@@ -498,6 +583,12 @@ impl MCTS {
         return (sum_n, q, distribution);
     }
 
+    /// Get the number of playouts of `node`.
+    ///
+    /// Arguments:
+    /// * `node`: The target node.
+    /// * `child_sum`: If true, the summantion of children N will be used instead of node N
+    ///                (These can be different when target_pruning is enabled.)
     pub fn get_playouts(&self, node: usize, child_sum: bool) -> u32 {
         if child_sum {
             let mut sum: u32 = 0;
@@ -512,7 +603,7 @@ impl MCTS {
         }
     }
 
-    /// nodeの子に関する情報を出力する
+    /// Output information about children of `node`.
     pub fn debug(&self, node: usize) {
         for child in &self.game_tree[node].children {
             println!(
@@ -529,6 +620,7 @@ impl MCTS {
         }
     }
 
+    /// Return pv information.
     pub fn info(&self, node: usize) -> (std::vec::Vec<Move>, f32) {
         let mut pv_moves: std::vec::Vec<Move> = std::vec::Vec::new();
         let mut q: f32 = 0.0;
@@ -555,6 +647,11 @@ impl MCTS {
 }
 
 impl MCTS {
+    /// Remove nodes except a node starting from root node.
+    ///
+    /// Arguments:
+    /// * `root`: From which nodes will be removed.
+    /// * `except_node`: Sub-tree whose root is `except_node` will not be removed.
     fn eliminate_except(&mut self, root: usize, except_node: usize) {
         let mut nodes: std::vec::Vec<usize> = std::vec::Vec::new();
 
@@ -576,6 +673,7 @@ impl MCTS {
         }
     }
 
+    /// Select the child node that has the largest PUCT value.
     fn select_puct_max_child(&self, node: usize, forced_playouts: bool) -> usize {
         let mut puct_max: f32 = -1.0;
         let mut puct_max_child: usize = 0;
@@ -595,6 +693,7 @@ impl MCTS {
         return puct_max_child;
     }
 
+    /// Select the child node that has the largest N value.
     fn select_n_max_child(&self, node: usize) -> usize {
         let mut n_max: u32 = 0;
         let mut n_max_child: usize = 0;
