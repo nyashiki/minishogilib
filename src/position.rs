@@ -1835,10 +1835,10 @@ fn is_repetition_test() {
     static REPETITION_SFEN2: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 3e2d 3a4b 2e3d 2a2b 4e4d 4a3b 5e4e 5a4a 3d5b 4a5a 5b3d 5a4a 3d5b 4a5a 5b2e 5a4a 2e5b 4a5a 5b3d 5a4a 3d5b";
     static CHECK_REPETITION_SFEN: &str = "2k2/5/5/5/2K2 b R 1 moves R*3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c";
     static CHECK_REPETITION_SFEN2: &str = "rbsgk/4p/5/P4/KGSBR b - 1 moves 4e4d 4a3b 2e3d 3a2b 3e2d 5a4a 5d5c 4a4b 5c5b 4b4d 5e4d G*1d 1e1d 3b1d R*1e 1d3b G*4b R*5d 4d4e 5d3d 4e3d B*3a 4b3b 2a3b 1e1b 1a1b R*1e 1b2a B*1b 2a1a 1b2c 1a2a 2c1b 2a1a 1b2c 1a2a 2c1b 2a1a 1b2c 1a2a 2c1b";
-    static NOT_REPETITION_SFEN: &str =
-        "rbsgk/4p/5/P4/KGSBR b - 1 moves 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a";
     static CHECK_REPETITION_SFEN3: &str =
         "3k1/5/2R2/5/2K2 b - 1 moves 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a";
+    static NOT_REPETITION_SFEN: &str =
+        "rbsgk/4p/5/P4/KGSBR b - 1 moves 5e4d 1a2b 4d5e 2b1a 5e4d 1a2b 4d5e 2b1a";
     static NOT_CHECK_REPETITION_SFEN: &str =
         "2k2/5/5/5/2K2 b R 1 moves R*3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a 2c3c 3a2a 3c2c 2a3a";
 
