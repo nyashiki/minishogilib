@@ -103,7 +103,7 @@ impl MCTS {
     #[new]
     pub fn new(obj: &PyRawObject, memory: f32) {
         let num_node: usize =
-            (memory * 1024.0 * 1024.0 * 1024.0 / std::mem::size_of::<MCTS>() as f32) as usize;
+            (memory * 1024.0 * 1024.0 * 1024.0 / std::mem::size_of::<Node>() as f32) as usize;
 
         obj.init(MCTS {
             size: num_node,
