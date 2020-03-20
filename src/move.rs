@@ -5,40 +5,48 @@ use types::*;
 #[pyclass]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Move {
-    pub piece: Piece,
-    pub from: usize,          // 移動元
-    pub to: usize,            // 移動先
-    pub is_hand: bool,        // 持ち駒を打つ手かどうか
-    pub promotion: bool,      // 成/不成
-    pub capture_piece: Piece, // 取る相手の駒
+    pub _data: u32, // 00 -- 07 bit 動かす駒
+                    // 08 -- 12 bit 移動元の座標
+                    // 13 -- 17 bit 移動先の座標
+                    // 18 -- 18 bit 持ち駒を打つ手かどうか
+                    // 19 -- 19 bit 成る手かどうか
+                    // 20 -- 27 bit 取る相手の駒
+
+
+    // pub piece: Piece,
+    // pub from: usize,          // 移動元
+    // pub to: usize,            // 移動先
+    // pub is_hand: bool,        // 持ち駒を打つ手かどうか
+    // pub promotion: bool,      // 成/不成
+    // pub capture_piece: Piece, // 取る相手の駒
 }
 
 #[pymethods]
 impl Move {
     pub fn sfen(&self) -> String {
-        if self.piece == Piece::NO_PIECE {
+        if self.get_piece() == Piece::NO_PIECE {
             return "resign".to_string();
         }
 
         const HAND_PIECE_TO_CHAR: [char; 7] = ['E', 'E', 'G', 'S', 'B', 'R', 'P'];
 
-        if self.is_hand {
+        if self.is_hand() {
             format!(
                 "{}*{}",
-                HAND_PIECE_TO_CHAR[self.piece.get_piece_type().as_usize()],
-                square_to_sfen(self.to)
+                HAND_PIECE_TO_CHAR[self.get_piece().get_piece_type().as_usize()],
+                square_to_sfen(self.get_to())
             )
         } else {
-            if self.promotion {
-                format!("{}{}+", square_to_sfen(self.from), square_to_sfen(self.to))
+            if self.is_promotion() {
+                format!("{}{}+", square_to_sfen(self.get_from()), square_to_sfen(self.get_to()))
             } else {
-                format!("{}{}", square_to_sfen(self.from), square_to_sfen(self.to))
+                format!("{}{}", square_to_sfen(self.get_from()), square_to_sfen(self.get_to()))
             }
         }
     }
 
     pub fn csa(&self) -> String {
-        if self.piece == Piece::NO_PIECE {
+        if self.get_piece() == Piece::NO_PIECE {
             return "%TORYO".to_string();
         }
 
@@ -47,23 +55,23 @@ impl Move {
             "TO",
         ];
 
-        if self.is_hand {
+        if self.is_hand() {
             format!(
                 "00{}{}",
-                square_to_csa(self.to),
-                csa_piece[self.piece.get_piece_type().as_usize()]
+                square_to_csa(self.get_to()),
+                csa_piece[self.get_piece().get_piece_type().as_usize()]
             )
         } else {
-            let piece = if self.promotion {
-                self.piece.get_piece_type().get_promoted()
+            let piece = if self.is_promotion() {
+                self.get_piece().get_piece_type().get_promoted()
             } else {
-                self.piece.get_piece_type()
+                self.get_piece().get_piece_type()
             };
 
             format!(
                 "{}{}{}",
-                square_to_csa(self.from),
-                square_to_csa(self.to),
+                square_to_csa(self.get_from()),
+                square_to_csa(self.get_to()),
                 csa_piece[piece.as_usize()]
             )
         }
@@ -80,27 +88,47 @@ impl pyo3::class::basic::PyObjectProtocol for Move {
 #[pymethods]
 impl Move {
     pub fn is_null_move(&self) -> bool {
-        self.piece == Piece::NO_PIECE
+        self.get_piece() == Piece::NO_PIECE
     }
 
     pub fn get_from(&self) -> usize {
-        self.from
+        ((self._data & 0b1111100000000) >> 8) as usize
+    }
+
+    pub fn set_from(&mut self, from: usize) {
+        self._data = (self._data & !0b1111100000000) | (from << 8) as u32;
     }
 
     pub fn get_to(&self) -> usize {
-        self.to
+        ((self._data & 0b111110000000000000) >> 13) as usize
     }
 
-    pub fn get_promotion(&self) -> bool {
-        self.promotion
+    pub fn set_to(&mut self, to: usize) {
+        self._data = (self._data & !0b111110000000000000) | (to << 13) as u32;
+    }
+
+    pub fn is_hand(&self) -> bool {
+        ((self._data & 0b1000000000000000000) >> 18) != 0
+    }
+
+    pub fn is_promotion(&self) -> bool {
+        ((self._data & 0b10000000000000000000) >> 19) != 0
     }
 
     pub fn get_hand_index(&self) -> usize {
-        self.piece.get_piece_type().as_usize() - 2
+        self.get_piece().get_piece_type().as_usize() - 2
     }
 }
 
 impl Move {
+    pub fn get_piece(&self) -> Piece {
+        Piece((self._data & 0b11111111) as u8)
+    }
+
+    pub fn get_capture_piece(&self) -> Piece {
+        Piece(((self._data & 0b1111111100000000000000000000) >> 20) as u8)
+    }
+
     pub fn board_move(
         piece: Piece,
         from: usize,
@@ -109,56 +137,50 @@ impl Move {
         capture_piece: Piece,
     ) -> Move {
         Move {
-            piece: piece,
-            from: from,
-            to: to,
-            is_hand: false,
-            promotion: promotion,
-            capture_piece: capture_piece,
+            _data: piece.as_u32() |
+                   (from as u32) << 8 |
+                   (to as u32) << 13  |
+                   (promotion as u32) << 19 |
+                   (capture_piece.as_u32()) << 20
         }
     }
 
     pub fn hand_move(piece: Piece, to: usize) -> Move {
         Move {
-            piece: piece,
-            from: 0,
-            to: to,
-            is_hand: true,
-            promotion: false,
-            capture_piece: Piece::NO_PIECE,
+            _data: piece.as_u32() |
+                   (to as u32) << 13 |
+                   1 << 18
         }
     }
 
     pub fn flip(&self) -> Move {
         let mut m = *self;
 
-        if !self.is_hand {
-            m.from = {
-                let y = self.from / 5;
-                let x = 4 - self.from % 5;
+        if !self.is_hand() {
+            let nfrom = {
+                let y = self.get_from() / 5;
+                let x = 4 - self.get_from() % 5;
 
                 y * 5 + x
             };
+
+            m.set_from(nfrom);
         }
 
-        m.to = {
-            let y = self.to / 5;
-            let x = 4 - self.to % 5;
+        let nto = {
+            let y = self.get_to() / 5;
+            let x = 4 - self.get_to() % 5;
 
             y * 5 + x
         };
+        m.set_to(nto);
 
         return m;
     }
 }
 
 pub static NULL_MOVE: Move = Move {
-    piece: Piece::NO_PIECE,
-    from: SQUARE_NB,
-    to: 0,
-    is_hand: false,
-    promotion: false,
-    capture_piece: Piece::NO_PIECE,
+    _data: 0
 };
 
 pub fn square_to_sfen(square: usize) -> String {
@@ -241,20 +263,20 @@ fn get_relation_test() {
 fn flip_test() {
     {
         let m = Move::board_move(Piece::NO_PIECE, 20, 15, false, Piece::NO_PIECE).flip();
-        assert_eq!(m.from, 24);
-        assert_eq!(m.to, 19);
+        assert_eq!(m.get_from(), 24);
+        assert_eq!(m.get_to(), 19);
     }
 
     {
         let m = Move::board_move(Piece::NO_PIECE, 23, 11, false, Piece::NO_PIECE).flip();
-        assert_eq!(m.from, 21);
-        assert_eq!(m.to, 13);
+        assert_eq!(m.get_from(), 21);
+        assert_eq!(m.get_to(), 13);
     }
 
     {
         let m = Move::hand_move(Piece::NO_PIECE, 15).flip();
 
-        assert_eq!(m.from, 0);
-        assert_eq!(m.to, 19);
+        assert_eq!(m.get_from(), 0);
+        assert_eq!(m.get_to(), 19);
     }
 }

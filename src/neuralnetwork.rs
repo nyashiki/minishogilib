@@ -142,32 +142,32 @@ impl Position {
 #[pymethods]
 impl Move {
     pub fn to_policy_index(&self) -> usize {
-        let c: Color = self.piece.get_color();
+        let c: Color = self.get_piece().get_color();
 
-        let index = if self.is_hand {
+        let index = if self.is_hand() {
             if c == Color::WHITE {
-                (64 + self.get_hand_index(), self.to)
+                (64 + self.get_hand_index(), self.get_to())
             } else {
-                (64 + self.get_hand_index(), SQUARE_NB - 1 - self.to)
+                (64 + self.get_hand_index(), SQUARE_NB - 1 - self.get_to())
             }
         } else {
-            let (direction, amount) = get_relation(self.from, self.to);
+            let (direction, amount) = get_relation(self.get_from(), self.get_to());
             assert!(amount > 0);
 
-            if self.get_promotion() {
+            if self.is_promotion() {
                 if c == Color::WHITE {
-                    (32 + 4 * direction as usize + amount - 1, self.from)
+                    (32 + 4 * direction as usize + amount - 1, self.get_from())
                 } else {
                     (
                         32 + 4 * ((direction as usize + 4) % 8) + amount - 1,
-                        SQUARE_NB - 1 - self.from,
+                        SQUARE_NB - 1 - self.get_from(),
                     )
                 }
             } else {
                 if c == Color::WHITE {
-                    (4 * direction as usize + amount - 1, self.from)
+                    (4 * direction as usize + amount - 1, self.get_from())
                 } else {
-                    (4 * ((direction as usize + 4) % 8) + amount - 1, SQUARE_NB - 1 - self.from)
+                    (4 * ((direction as usize + 4) % 8) + amount - 1, SQUARE_NB - 1 - self.get_from())
                 }
             }
         };
@@ -248,11 +248,11 @@ fn to_policy_index_test() {
                 let index = m.to_policy_index();
                 let move_from_index = index_to_move(&position, index);
 
-                if m.is_hand {
-                    assert_eq!(m.to, move_from_index.to);
+                if m.is_hand() {
+                    assert_eq!(m.get_to(), move_from_index.get_to());
                 } else {
-                    assert_eq!(m.from, move_from_index.from);
-                    assert_eq!(m.promotion, move_from_index.promotion);
+                    assert_eq!(m.get_from(), move_from_index.get_from());
+                    assert_eq!(m.is_promotion(), move_from_index.is_promotion());
                 }
             }
 

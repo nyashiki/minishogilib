@@ -367,9 +367,9 @@ impl MCTS {
         }
 
         if moves.len() == 0 {
-            value = if position.kif[position.ply as usize - 1].piece.get_piece_type()
+            value = if position.kif[position.ply as usize - 1].get_piece().get_piece_type()
                 == PieceType::PAWN
-                && position.kif[position.ply as usize - 1].is_hand
+                && position.kif[position.ply as usize - 1].is_hand()
             {
                 // Checkmate by dropping a pawn.
                 1.0
