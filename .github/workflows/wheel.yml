@@ -1,4 +1,4 @@
-name: build
+name: wheel
 
 on: [push]
 
@@ -19,7 +19,7 @@ jobs:
       - name: Install Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
-          export PATH="/root/.cargo/bin:${PATH}"
+          source $HOME/.cargo/env
       - name: Install maturin
         run: |
           pip3 install maturin
