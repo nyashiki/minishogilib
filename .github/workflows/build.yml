@@ -22,4 +22,4 @@ jobs:
           source $HOME/.cargo/env
       - name: Build
         run: |
-          cargo build -- -C link-arg=-undefined -Clink-arg=dynamic_lookup
+          cargo rustc -- -C link-arg=-undefined -Clink-arg=dynamic_lookup
