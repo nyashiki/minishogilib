@@ -20,6 +20,10 @@ jobs:
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           export PATH="/root/.cargo/bin:${PATH}"
+      - name: Install boost
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install boost
       - name: Build
         run: |
           cargo build
