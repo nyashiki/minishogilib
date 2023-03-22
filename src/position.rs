@@ -41,11 +41,11 @@ pub struct Position {
 #[pymethods]
 impl Position {
     #[new]
-    pub fn new(obj: &PyRawObject) {
-        obj.init(Position::empty_board());
+    pub fn new() -> Position {
+        Position::empty_board()
     }
 
-    fn __getstate__(&self) -> PyResult<(String)> {
+    fn __getstate__(&self) -> PyResult<String> {
         Ok(self.sfen(true))
     }
 

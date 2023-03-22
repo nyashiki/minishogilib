@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use once_cell::sync::Lazy;
 
 use types::*;
 
@@ -76,16 +77,12 @@ impl Move {
             )
         }
     }
-}
 
-#[pyproto]
-impl pyo3::class::basic::PyObjectProtocol for Move {
     fn __repr__(&self) -> PyResult<String> {
         Ok(self.sfen())
     }
 }
 
-#[pymethods]
 impl Move {
     pub fn is_null_move(&self) -> bool {
         self.get_piece() == Piece::NO_PIECE
@@ -118,9 +115,7 @@ impl Move {
     pub fn get_hand_index(&self) -> usize {
         self.get_piece().get_piece_type().as_usize() - 2
     }
-}
 
-impl Move {
     pub fn get_piece(&self) -> Piece {
         Piece((self._data & 0b11111111) as u8)
     }
@@ -203,40 +198,34 @@ pub fn sfen_to_square(sfen: &str) -> usize {
     ((sfen.as_bytes()[1] - ('a' as u8)) * 5 + (('5' as u8) - sfen.as_bytes()[0])) as usize
 }
 
-lazy_static! {
-    /// 2つの座標を受け取り、その方向と距離を返す
-    /// e.g. RELATION_TABLE[20][15] = (Direction::N, 1)
-    static ref RELATION_TABLE: [[(Direction, usize); SQUARE_NB]; SQUARE_NB] = {
-        let mut table = [[(Direction::N, 0usize); SQUARE_NB]; SQUARE_NB];
+/// 2つの座標を受け取り、その方向と距離を返す
+/// e.g. RELATION_TABLE[20][15] = (Direction::N, 1)
+static RELATION_TABLE: Lazy<[[(Direction, usize); SQUARE_NB]; SQUARE_NB]> = Lazy::new(|| {
+    let mut table = [[(Direction::N, 0usize); SQUARE_NB]; SQUARE_NB];
 
-        const MOVE_DIRS: [Direction; 8] = [Direction::N, Direction::NE, Direction::E, Direction::SE, Direction::S, Direction::SW, Direction::W, Direction::NW];
-        const MOVE_DIFF: [(i8, i8); 8] = [(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)];
+    const MOVE_DIRS: [Direction; 8] = [Direction::N, Direction::NE, Direction::E, Direction::SE, Direction::S, Direction::SW, Direction::W, Direction::NW];
+    const MOVE_DIFF: [(i8, i8); 8] = [(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)];
 
-        for from in 0..SQUARE_NB {
-            let y = (from as i8) / 5;
-            let x = (from as i8) % 5;
+    for from in 0..SQUARE_NB {
+        let y = (from as i8) / 5;
+        let x = (from as i8) % 5;
 
-            for dir in 0..8 {
-                for amount in 1..5 {
-                    let ny = y + MOVE_DIFF[dir].0 * amount;
-                    let nx = x + MOVE_DIFF[dir].1 * amount;
+        for dir in 0..8 {
+            for amount in 1..5 {
+                let ny = y + MOVE_DIFF[dir].0 * amount;
+                let nx = x + MOVE_DIFF[dir].1 * amount;
 
-                    if ny < 0 || ny >= 5 || nx < 0 || nx >= 5 {
-                        break;
-                    }
-
-                    table[(5 * y + x) as usize][(5 * ny + nx) as usize] = (MOVE_DIRS[dir], amount as usize);
+                if ny < 0 || ny >= 5 || nx < 0 || nx >= 5 {
+                    break;
                 }
+
+                table[(5 * y + x) as usize][(5 * ny + nx) as usize] = (MOVE_DIRS[dir], amount as usize);
             }
         }
+    }
 
-        return table;
-    };
-}
-
-pub fn init() {
-    lazy_static::initialize(&RELATION_TABLE);
-}
+    return table;
+});
 
 pub fn get_relation(square1: usize, square2: usize) -> (Direction, usize) {
     return RELATION_TABLE[square1][square2];

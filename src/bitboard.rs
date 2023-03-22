@@ -1,5 +1,6 @@
 use bitintr::Pext;
 use bitintr::Popcnt;
+use once_cell::sync::Lazy;
 
 use position::*;
 use types::*;
@@ -8,498 +9,483 @@ pub type Bitboard = u32;
 
 pub const ONE_BB: Bitboard = 0b11111_11111_11111_11111_11111;
 
-lazy_static! {
-    /// 近接の利きを保持するbitboard
-    /// ADJACENT_ATTACK[square][piece]として参照する
-    static ref ADJACENT_ATTACK: [[Bitboard; Piece::B_PAWN_X.as_usize() + 1]; SQUARE_NB] = {
-        let mut aa: [[Bitboard; Piece::B_PAWN_X.as_usize() + 1]; SQUARE_NB] = [[0; Piece::B_PAWN_X.as_usize() + 1]; SQUARE_NB];
+/// 近接の利きを保持するbitboard
+/// ADJACENT_ATTACK[square][piece]として参照する
+static ADJACENT_ATTACK: Lazy<[[Bitboard; Piece::B_PAWN_X.as_usize() + 1]; SQUARE_NB]> = Lazy::new(|| {
+    let mut aa: [[Bitboard; Piece::B_PAWN_X.as_usize() + 1]; SQUARE_NB] = [[0; Piece::B_PAWN_X.as_usize() + 1]; SQUARE_NB];
 
-        let mut position: Position = Position::empty_board();
+    let mut position: Position = Position::empty_board();
 
-        const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
+    const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
 
-        for i in 0..SQUARE_NB {
-            for piece in PIECE_ALL.iter() {
-                position.board[i] = *piece;
-                position.side_to_move = piece.get_color();
+    for i in 0..SQUARE_NB {
+        for piece in PIECE_ALL.iter() {
+            position.board[i] = *piece;
+            position.side_to_move = piece.get_color();
 
-                for move_dir in position.board[i].get_move_dirs() {
-                    // これ以上左に行けない
-                    if i % 5 == 0
-                        && (move_dir == Direction::SW
-                            || move_dir == Direction::W
-                            || move_dir == Direction::NW)
+            for move_dir in position.board[i].get_move_dirs() {
+                // これ以上左に行けない
+                if i % 5 == 0
+                    && (move_dir == Direction::SW
+                        || move_dir == Direction::W
+                        || move_dir == Direction::NW)
                     {
                         continue;
                     }
 
-                    // これ以上上に行けない
-                    if i / 5 == 0
-                        && (move_dir == Direction::N
-                            || move_dir == Direction::NE
-                            || move_dir == Direction::NW)
+                // これ以上上に行けない
+                if i / 5 == 0
+                    && (move_dir == Direction::N
+                        || move_dir == Direction::NE
+                        || move_dir == Direction::NW)
                     {
                         continue;
                     }
 
-                    // これ以上右に行けない
-                    if i % 5 == 4
-                        && (move_dir == Direction::NE
-                            || move_dir == Direction::E
-                            || move_dir == Direction::SE)
+                // これ以上右に行けない
+                if i % 5 == 4
+                    && (move_dir == Direction::NE
+                        || move_dir == Direction::E
+                        || move_dir == Direction::SE)
                     {
                         continue;
                     }
 
-                    // これ以上下に行けない
-                    if i / 5 == 4
-                        && (move_dir == Direction::SE
-                            || move_dir == Direction::S
-                            || move_dir == Direction::SW)
+                // これ以上下に行けない
+                if i / 5 == 4
+                    && (move_dir == Direction::SE
+                        || move_dir == Direction::S
+                        || move_dir == Direction::SW)
                     {
                         continue;
                     }
 
-                    let move_to = ((i as i8) + MOVE_TOS[move_dir as usize]) as usize;
-                    aa[i][piece.as_usize()] |= 1 << move_to;
-                }
-            }
-            position.board[i] = Piece::NO_PIECE;
-        }
-
-        return aa;
-    };
-
-    /// 角の右上--左下方向の利きを参照するために用いるmask
-    static ref BISHOP_MASK1: [u32; SQUARE_NB] = {
-        let mut m: [u32; SQUARE_NB] = [0; SQUARE_NB];
-
-        for i in 0..SQUARE_NB {
-            let right_top = {
-                let mut y = i / 5;
-                let mut x = i % 5;
-
-                while y > 0 && x < 4 {
-                    y -= 1;
-                    x += 1;
-                }
-
-                5 * y + x
-            };
-
-            let left_bottom = {
-                let mut y = i / 5;
-                let mut x = i % 5;
-
-                while y < 4 && x > 0 {
-                    y += 1;
-                    x -= 1;
-                }
-
-                5 * y + x
-            };
-
-            let mut square = right_top;
-            loop {
-                m[i] |= 1 << square;
-                if square == left_bottom {
-                    break;
-                }
-                square += 4;
+                let move_to = ((i as i8) + MOVE_TOS[move_dir as usize]) as usize;
+                aa[i][piece.as_usize()] |= 1 << move_to;
             }
         }
+        position.board[i] = Piece::NO_PIECE;
+    }
 
-        return m;
-    };
+    return aa;
+});
 
-    /// 角の左上--右下方向の利きを参照するために用いるmask
-    static ref BISHOP_MASK2: [u32; SQUARE_NB] = {
-        let mut m: [u32; SQUARE_NB] = [0; SQUARE_NB];
+/// 角の右上--左下方向の利きを参照するために用いるmask
+static BISHOP_MASK1: Lazy<[u32; SQUARE_NB]> = Lazy::new(|| {
+    let mut m: [u32; SQUARE_NB] = [0; SQUARE_NB];
 
-        for i in 0..SQUARE_NB {
-            let left_top = {
-                let mut y = i / 5;
-                let mut x = i % 5;
+    for i in 0..SQUARE_NB {
+        let right_top = {
+            let mut y = i / 5;
+            let mut x = i % 5;
 
-                while y > 0 && x > 0 {
-                    y -= 1;
-                    x -= 1;
-                }
-
-                5 * y + x
-            };
-
-            let right_bottom = {
-                let mut y = i / 5;
-                let mut x = i % 5;
-
-                while y < 4 && x < 4 {
-                    y += 1;
-                    x += 1;
-                }
-
-                5 * y + x
-            };
-
-            let mut square = left_top;
-            loop {
-                m[i] |= 1 << square;
-                if square == right_bottom {
-                    break;
-                }
-                square += 6;
+            while y > 0 && x < 4 {
+                y -= 1;
+                x += 1;
             }
+
+            5 * y + x
+        };
+
+        let left_bottom = {
+            let mut y = i / 5;
+            let mut x = i % 5;
+
+            while y < 4 && x > 0 {
+                y += 1;
+                x -= 1;
+            }
+
+            5 * y + x
+        };
+
+        let mut square = right_top;
+        loop {
+            m[i] |= 1 << square;
+            if square == left_bottom {
+                break;
+            }
+            square += 4;
         }
+    }
 
-        return m;
-    };
+    return m;
+});
 
-    /// 飛車の横方向の利きを参照するために用いるmask
-    static ref ROOK_MASK1: [u32; SQUARE_NB] = {
-        let mut m: [u32; SQUARE_NB] = [0; SQUARE_NB];
+/// 角の左上--右下方向の利きを参照するために用いるmask
+static BISHOP_MASK2: Lazy<[u32; SQUARE_NB]> = Lazy::new(|| {
+    let mut m: [u32; SQUARE_NB] = [0; SQUARE_NB];
 
-        for i in 0..SQUARE_NB {
-            let left: usize = (i / 5) * 5;
+    for i in 0..SQUARE_NB {
+        let left_top = {
+            let mut y = i / 5;
+            let mut x = i % 5;
+
+            while y > 0 && x > 0 {
+                y -= 1;
+                x -= 1;
+            }
+
+            5 * y + x
+        };
+
+        let right_bottom = {
+            let mut y = i / 5;
+            let mut x = i % 5;
+
+            while y < 4 && x < 4 {
+                y += 1;
+                x += 1;
+            }
+
+            5 * y + x
+        };
+
+        let mut square = left_top;
+        loop {
+            m[i] |= 1 << square;
+            if square == right_bottom {
+                break;
+            }
+            square += 6;
+        }
+    }
+
+    return m;
+});
+
+/// 飛車の横方向の利きを参照するために用いるmask
+static ROOK_MASK1: Lazy<[u32; SQUARE_NB]> = Lazy::new(||{
+    let mut m: [u32; SQUARE_NB] = [0; SQUARE_NB];
+
+    for i in 0..SQUARE_NB {
+        let left: usize = (i / 5) * 5;
+
+        for j in 0..5 {
+            m[i] |= 1 << (left + j);
+        }
+    }
+
+    return m;
+});
+
+/// 飛車の縦方向の利きを参照するために用いるmask
+static ROOK_MASK2: Lazy<[u32; SQUARE_NB]> = Lazy::new(|| {
+    let mut m: [u32; SQUARE_NB] = [0; SQUARE_NB];
+
+    for i in 0..SQUARE_NB {
+        let top: usize = i % 5;
+
+        for j in 0..5 {
+            m[i] |= 1 << (top + 5 * j);
+        }
+    }
+
+    return m;
+});
+
+/// 角の右上--左下方向の利きを保持するbitboard
+/// BISHOP_ATTACK1[bishop_square][pext((player_bb[WHITE] | player_bb[BLACK]), mask)]として参照する
+static BISHOP_ATTACK1: Lazy<[[Bitboard; 32]; SQUARE_NB]> = Lazy::new(||{
+    let mut ba: [[Bitboard; 32]; SQUARE_NB] = [[0; 32]; SQUARE_NB];
+
+    for i in 0..SQUARE_NB {
+        let right_top = {
+            let mut y = i / 5;
+            let mut x = i % 5;
+
+            while y > 0 && x < 4 {
+                y -= 1;
+                x += 1;
+            }
+
+            5 * y + x
+        };
+
+        let left_bottom = {
+            let mut y = i / 5;
+            let mut x = i % 5;
+
+            while y < 4 && x > 0 {
+                y += 1;
+                x -= 1;
+            }
+
+            5 * y + x
+        };
+
+        for player_bb in 0..32 {
+            let mut position: Position = Position::empty_board();
 
             for j in 0..5 {
-                m[i] |= 1 << (left + j);
+                if player_bb & (1 << j) != 0 {
+                    position.board[right_top + 4 * j] = Piece::B_PAWN;
+                }
+                if right_top + 4 * j == left_bottom {
+                    break;
+                }
+            }
+
+            const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
+            const MOVE_DIRS: [Direction; 2] = [Direction::NE, Direction::SW];
+            for move_dir in &MOVE_DIRS {
+                // これ以上左に行けない
+                if i % 5 == 0 && (*move_dir == Direction::SW || *move_dir == Direction::NW)
+                {
+                    continue;
+                }
+
+                // これ以上上に行けない
+                if i / 5 == 0 && (*move_dir == Direction::NE || *move_dir == Direction::NW)
+                {
+                    continue;
+                }
+
+                // これ以上右に行けない
+                if i % 5 == 4 && (*move_dir == Direction::NE || *move_dir == Direction::SE)
+                {
+                    continue;
+                }
+
+                // これ以上下に行けない
+                if i / 5 == 4 && (*move_dir == Direction::SE || *move_dir == Direction::SW)
+                {
+                    continue;
+                }
+
+                for amount in 1..5 {
+                    let move_to = ((i as i8)
+                                   + MOVE_TOS[*move_dir as usize] * (amount as i8))
+                        as usize;
+
+                    ba[i][player_bb] |= 1 << move_to;
+
+                    if position.board[move_to] != Piece::NO_PIECE {
+                        break;
+                    }
+
+                    // 端まで到達したらそれ以上進めない
+                    if move_to / 5 == 0
+                        || move_to / 5 == 4
+                            || move_to % 5 == 0
+                            || move_to % 5 == 4
+                            {
+                                break;
+                            }
+                }
             }
         }
+    }
 
-        return m;
-    };
+    return ba;
+});
 
-    /// 飛車の縦方向の利きを参照するために用いるmask
-    static ref ROOK_MASK2: [u32; SQUARE_NB] = {
-        let mut m: [u32; SQUARE_NB] = [0; SQUARE_NB];
+/// 角の左上--右下方向の利きを保持するbitboard
+/// BISHOP_ATTACK2[bishop_square][pext((player_bb[WHITE] | player_bb[BLACK]), mask)]として参照する
+static BISHOP_ATTACK2: Lazy<[[Bitboard; 32]; SQUARE_NB]> = Lazy::new(||{
+    let mut ba: [[Bitboard; 32]; SQUARE_NB] = [[0; 32]; SQUARE_NB];
 
-        for i in 0..SQUARE_NB {
-            let top: usize = i % 5;
+    for i in 0..SQUARE_NB {
+        let left_top = {
+            let mut y = i / 5;
+            let mut x = i % 5;
+
+            while y > 0 && x > 0 {
+                y -= 1;
+                x -= 1;
+            }
+
+            5 * y + x
+        };
+
+        let right_bottom = {
+            let mut y = i / 5;
+            let mut x = i % 5;
+
+            while y < 4 && x < 4 {
+                y += 1;
+                x += 1;
+            }
+
+            5 * y + x
+        };
+
+        for player_bb in 0..32 {
+            let mut position: Position = Position::empty_board();
 
             for j in 0..5 {
-                m[i] |= 1 << (top + 5 * j);
+                if player_bb & (1 << j) != 0 {
+                    position.board[left_top + 6 * j] = Piece::B_PAWN;
+                }
+                if left_top + 6 * j == right_bottom {
+                    break;
+                }
+            }
+
+            const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
+            const MOVE_DIRS: [Direction; 2] = [Direction::NW, Direction::SE];
+            for move_dir in &MOVE_DIRS {
+                // これ以上左に行けない
+                if i % 5 == 0 && (*move_dir == Direction::SW || *move_dir == Direction::NW)
+                {
+                    continue;
+                }
+
+                // これ以上上に行けない
+                if i / 5 == 0 && (*move_dir == Direction::NE || *move_dir == Direction::NW)
+                {
+                    continue;
+                }
+
+                // これ以上右に行けない
+                if i % 5 == 4 && (*move_dir == Direction::NE || *move_dir == Direction::SE)
+                {
+                    continue;
+                }
+
+                // これ以上下に行けない
+                if i / 5 == 4 && (*move_dir == Direction::SE || *move_dir == Direction::SW)
+                {
+                    continue;
+                }
+
+                for amount in 1..5 {
+                    let move_to = ((i as i8)
+                                   + MOVE_TOS[*move_dir as usize] * (amount as i8))
+                        as usize;
+
+                    ba[i][player_bb] |= 1 << move_to;
+
+                    if position.board[move_to] != Piece::NO_PIECE {
+                        break;
+                    }
+
+                    // 端まで到達したらそれ以上進めない
+                    if move_to / 5 == 0
+                        || move_to / 5 == 4
+                            || move_to % 5 == 0
+                            || move_to % 5 == 4
+                            {
+                                break;
+                            }
+                }
             }
         }
+    }
 
-        return m;
-    };
+    return ba;
+});
 
-    /// 角の右上--左下方向の利きを保持するbitboard
-    /// BISHOP_ATTACK1[bishop_square][pext((player_bb[WHITE] | player_bb[BLACK]), mask)]として参照する
-    static ref BISHOP_ATTACK1: [[Bitboard; 32]; SQUARE_NB] = {
-        let mut ba: [[Bitboard; 32]; SQUARE_NB] = [[0; 32]; SQUARE_NB];
+/// 飛車の横方向の利きを保持するbitboard
+/// ROOK_ATTACK1[rook_square][pext((player_bb[WHITE] | player_bb[BLACK]), mask)]として参照する
+static ROOK_ATTACK1: Lazy<[[Bitboard; 32]; SQUARE_NB]> = Lazy::new(||{
+    let mut ra: [[Bitboard; 32]; SQUARE_NB] = [[0; 32]; SQUARE_NB];
 
-        for i in 0..SQUARE_NB {
-            let right_top = {
-                let mut y = i / 5;
-                let mut x = i % 5;
+    for i in 0..SQUARE_NB {
+        let left: usize = (i / 5) * 5;
 
-                while y > 0 && x < 4 {
-                    y -= 1;
-                    x += 1;
+        for player_bb in 0..32 {
+            let mut position: Position = Position::empty_board();
+
+            for j in 0..5 {
+                if player_bb & (1 << j) != 0 {
+                    position.board[left + j] = Piece::B_PAWN;
+                }
+            }
+
+            const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
+            const MOVE_DIRS: [Direction; 2] = [Direction::E, Direction::W];
+            for move_dir in &MOVE_DIRS {
+                // これ以上左に行けない
+                if i % 5 == 0 && *move_dir == Direction::W
+                {
+                    continue;
+                }
+                // これ以上右に行けない
+                if i % 5 == 4 && *move_dir == Direction::E
+                {
+                    continue;
                 }
 
-                5 * y + x
-            };
+                for amount in 1..5 {
+                    let move_to = ((i as i8)
+                                   + MOVE_TOS[*move_dir as usize] * (amount as i8))
+                        as usize;
 
-            let left_bottom = {
-                let mut y = i / 5;
-                let mut x = i % 5;
+                    ra[i][player_bb] |= 1 << move_to;
 
-                while y < 4 && x > 0 {
-                    y += 1;
-                    x -= 1;
-                }
-
-                5 * y + x
-            };
-
-            for player_bb in 0..32 {
-                let mut position: Position = Position::empty_board();
-
-                for j in 0..5 {
-                    if player_bb & (1 << j) != 0 {
-                        position.board[right_top + 4 * j] = Piece::B_PAWN;
+                    if position.board[move_to] != Piece::NO_PIECE {
+                        break;
                     }
-                    if right_top + 4 * j == left_bottom {
+
+                    // 端まで到達したらそれ以上進めない
+                    if (*move_dir == Direction::E && move_to % 5 == 4) || (*move_dir == Direction::W && move_to % 5 == 0)
+                    {
                         break;
                     }
                 }
-
-                const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
-                const MOVE_DIRS: [Direction; 2] = [Direction::NE, Direction::SW];
-                for move_dir in &MOVE_DIRS {
-                    // これ以上左に行けない
-                    if i % 5 == 0 && (*move_dir == Direction::SW || *move_dir == Direction::NW)
-                    {
-                        continue;
-                    }
-
-                    // これ以上上に行けない
-                    if i / 5 == 0 && (*move_dir == Direction::NE || *move_dir == Direction::NW)
-                    {
-                        continue;
-                    }
-
-                    // これ以上右に行けない
-                    if i % 5 == 4 && (*move_dir == Direction::NE || *move_dir == Direction::SE)
-                    {
-                        continue;
-                    }
-
-                    // これ以上下に行けない
-                    if i / 5 == 4 && (*move_dir == Direction::SE || *move_dir == Direction::SW)
-                    {
-                        continue;
-                    }
-
-                    for amount in 1..5 {
-                        let move_to = ((i as i8)
-                            + MOVE_TOS[*move_dir as usize] * (amount as i8))
-                            as usize;
-
-                        ba[i][player_bb] |= 1 << move_to;
-
-                        if position.board[move_to] != Piece::NO_PIECE {
-                            break;
-                        }
-
-                        // 端まで到達したらそれ以上進めない
-                        if move_to / 5 == 0
-                            || move_to / 5 == 4
-                            || move_to % 5 == 0
-                            || move_to % 5 == 4
-                        {
-                            break;
-                        }
-                    }
-                }
             }
         }
+    }
 
-        return ba;
-    };
+    return ra;
+});
 
-    /// 角の左上--右下方向の利きを保持するbitboard
-    /// BISHOP_ATTACK2[bishop_square][pext((player_bb[WHITE] | player_bb[BLACK]), mask)]として参照する
-    static ref BISHOP_ATTACK2: [[Bitboard; 32]; SQUARE_NB] = {
-        let mut ba: [[Bitboard; 32]; SQUARE_NB] = [[0; 32]; SQUARE_NB];
+/// 飛車の縦方向の利きを保持するbitboard
+/// ROOK_ATTACK2[rook_square][pext((player_bb[WHITE] | player_bb[BLACK]), mask)]として参照する
+static ROOK_ATTACK2: Lazy<[[Bitboard; 32]; SQUARE_NB]> = Lazy::new(||{
+    let mut ra: [[Bitboard; 32]; SQUARE_NB] = [[0; 32]; SQUARE_NB];
 
-        for i in 0..SQUARE_NB {
-            let left_top = {
-                let mut y = i / 5;
-                let mut x = i % 5;
+    for i in 0..SQUARE_NB {
+        let top: usize = i % 5;
 
-                while y > 0 && x > 0 {
-                    y -= 1;
-                    x -= 1;
+        for player_bb in 0..32 {
+            let mut position: Position = Position::empty_board();
+
+            for j in 0..5 {
+                if player_bb & (1 << j) != 0 {
+                    position.board[top + 5 * j] = Piece::B_PAWN;
+                }
+            }
+
+            const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
+            const MOVE_DIRS: [Direction; 2] = [Direction::N, Direction::S];
+            for move_dir in &MOVE_DIRS {
+                // これ以上上に行けない
+                if i / 5 == 0 && *move_dir == Direction::N
+                {
+                    continue;
                 }
 
-                5 * y + x
-            };
-
-            let right_bottom = {
-                let mut y = i / 5;
-                let mut x = i % 5;
-
-                while y < 4 && x < 4 {
-                    y += 1;
-                    x += 1;
+                // これ以上下に行けない
+                if i / 5 == 4 && *move_dir == Direction::S
+                {
+                    continue;
                 }
 
-                5 * y + x
-            };
+                for amount in 1..5 {
+                    let move_to = ((i as i8)
+                                   + MOVE_TOS[*move_dir as usize] * (amount as i8))
+                        as usize;
 
-            for player_bb in 0..32 {
-                let mut position: Position = Position::empty_board();
+                    ra[i][player_bb] |= 1 << move_to;
 
-                for j in 0..5 {
-                    if player_bb & (1 << j) != 0 {
-                        position.board[left_top + 6 * j] = Piece::B_PAWN;
+                    if position.board[move_to] != Piece::NO_PIECE {
+                        break;
                     }
-                    if left_top + 6 * j == right_bottom {
+
+                    // 端まで到達したらそれ以上進めない
+                    if (*move_dir == Direction::N && move_to / 5 == 0) || (*move_dir == Direction::S && move_to / 5 == 4)
+                    {
                         break;
                     }
                 }
-
-                const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
-                const MOVE_DIRS: [Direction; 2] = [Direction::NW, Direction::SE];
-                for move_dir in &MOVE_DIRS {
-                    // これ以上左に行けない
-                    if i % 5 == 0 && (*move_dir == Direction::SW || *move_dir == Direction::NW)
-                    {
-                        continue;
-                    }
-
-                    // これ以上上に行けない
-                    if i / 5 == 0 && (*move_dir == Direction::NE || *move_dir == Direction::NW)
-                    {
-                        continue;
-                    }
-
-                    // これ以上右に行けない
-                    if i % 5 == 4 && (*move_dir == Direction::NE || *move_dir == Direction::SE)
-                    {
-                        continue;
-                    }
-
-                    // これ以上下に行けない
-                    if i / 5 == 4 && (*move_dir == Direction::SE || *move_dir == Direction::SW)
-                    {
-                        continue;
-                    }
-
-                    for amount in 1..5 {
-                        let move_to = ((i as i8)
-                            + MOVE_TOS[*move_dir as usize] * (amount as i8))
-                            as usize;
-
-                        ba[i][player_bb] |= 1 << move_to;
-
-                        if position.board[move_to] != Piece::NO_PIECE {
-                            break;
-                        }
-
-                        // 端まで到達したらそれ以上進めない
-                        if move_to / 5 == 0
-                            || move_to / 5 == 4
-                            || move_to % 5 == 0
-                            || move_to % 5 == 4
-                        {
-                            break;
-                        }
-                    }
-                }
             }
         }
+    }
 
-        return ba;
-    };
-
-    /// 飛車の横方向の利きを保持するbitboard
-    /// ROOK_ATTACK1[rook_square][pext((player_bb[WHITE] | player_bb[BLACK]), mask)]として参照する
-    static ref ROOK_ATTACK1: [[Bitboard; 32]; SQUARE_NB] = {
-        let mut ra: [[Bitboard; 32]; SQUARE_NB] = [[0; 32]; SQUARE_NB];
-
-        for i in 0..SQUARE_NB {
-            let left: usize = (i / 5) * 5;
-
-            for player_bb in 0..32 {
-                let mut position: Position = Position::empty_board();
-
-                for j in 0..5 {
-                    if player_bb & (1 << j) != 0 {
-                        position.board[left + j] = Piece::B_PAWN;
-                    }
-                }
-
-                const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
-                const MOVE_DIRS: [Direction; 2] = [Direction::E, Direction::W];
-                for move_dir in &MOVE_DIRS {
-                    // これ以上左に行けない
-                    if i % 5 == 0 && *move_dir == Direction::W
-                    {
-                        continue;
-                    }
-                    // これ以上右に行けない
-                    if i % 5 == 4 && *move_dir == Direction::E
-                    {
-                        continue;
-                    }
-
-                    for amount in 1..5 {
-                        let move_to = ((i as i8)
-                            + MOVE_TOS[*move_dir as usize] * (amount as i8))
-                            as usize;
-
-                        ra[i][player_bb] |= 1 << move_to;
-
-                        if position.board[move_to] != Piece::NO_PIECE {
-                            break;
-                        }
-
-                        // 端まで到達したらそれ以上進めない
-                        if (*move_dir == Direction::E && move_to % 5 == 4) || (*move_dir == Direction::W && move_to % 5 == 0)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        return ra;
-    };
-
-    /// 飛車の縦方向の利きを保持するbitboard
-    /// ROOK_ATTACK2[rook_square][pext((player_bb[WHITE] | player_bb[BLACK]), mask)]として参照する
-    static ref ROOK_ATTACK2: [[Bitboard; 32]; SQUARE_NB] = {
-        let mut ra: [[Bitboard; 32]; SQUARE_NB] = [[0; 32]; SQUARE_NB];
-
-        for i in 0..SQUARE_NB {
-            let top: usize = i % 5;
-
-            for player_bb in 0..32 {
-                let mut position: Position = Position::empty_board();
-
-                for j in 0..5 {
-                    if player_bb & (1 << j) != 0 {
-                        position.board[top + 5 * j] = Piece::B_PAWN;
-                    }
-                }
-
-                const MOVE_TOS: [i8; 8] = [-5, -4, 1, 6, 5, 4, -1, -6];
-                const MOVE_DIRS: [Direction; 2] = [Direction::N, Direction::S];
-                for move_dir in &MOVE_DIRS {
-                    // これ以上上に行けない
-                    if i / 5 == 0 && *move_dir == Direction::N
-                    {
-                        continue;
-                    }
-
-                    // これ以上下に行けない
-                    if i / 5 == 4 && *move_dir == Direction::S
-                    {
-                        continue;
-                    }
-
-                    for amount in 1..5 {
-                        let move_to = ((i as i8)
-                            + MOVE_TOS[*move_dir as usize] * (amount as i8))
-                            as usize;
-
-                        ra[i][player_bb] |= 1 << move_to;
-
-                        if position.board[move_to] != Piece::NO_PIECE {
-                            break;
-                        }
-
-                        // 端まで到達したらそれ以上進めない
-                        if (*move_dir == Direction::N && move_to / 5 == 0) || (*move_dir == Direction::S && move_to / 5 == 4)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        return ra;
-    };
-}
-
-pub fn init() {
-    lazy_static::initialize(&BISHOP_MASK1);
-    lazy_static::initialize(&BISHOP_MASK2);
-    lazy_static::initialize(&ROOK_MASK1);
-    lazy_static::initialize(&ROOK_MASK2);
-
-    lazy_static::initialize(&ADJACENT_ATTACK);
-    lazy_static::initialize(&BISHOP_ATTACK1);
-    lazy_static::initialize(&BISHOP_ATTACK2);
-    lazy_static::initialize(&ROOK_ATTACK1);
-    lazy_static::initialize(&ROOK_ATTACK2);
-}
+    return ra;
+});
 
 pub fn adjacent_attack(square: usize, piece: Piece) -> Bitboard {
     ADJACENT_ATTACK[square][piece.as_usize()]
