@@ -11,19 +11,16 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: "pip"
       - name: Install Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
-          export PATH="/root/.cargo/bin:${PATH}"
-      - name: Install boost
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install boost
+          source $HOME/.cargo/env
       - name: Build
         run: |
           cargo build
