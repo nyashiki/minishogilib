@@ -1,6 +1,6 @@
 # Minishogilib
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PyPI](https://badge.fury.io/py/minishogilib.svg)(https://pypi.org/project/minishogilib/)
+[![PyPI](https://badge.fury.io/py/minishogilib.svg)](https://pypi.org/project/minishogilib/)
 
 [![build](https://github.com/Nyashiki/minishogilib/actions/workflows/build.yml/badge.svg)](https://github.com/Nyashiki/minishogilib/actions/workflows/build.yml)
 [![test](https://github.com/Nyashiki/minishogilib/actions/workflows/test.yml/badge.svg)](https://github.com/Nyashiki/minishogilib/actions/workflows/test.yml)
