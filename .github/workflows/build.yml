@@ -4,11 +4,27 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v1
-      - name: Build
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Rust
         run: |
-          rustup install nightly
-          rustup override set nightly
-          cargo build --release --verbose
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          source $HOME/.cargo/env
+      - name: Build
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cargo rustc -- -C link-arg=-undefined
+      - name: Build
+        if: matrix.os == 'macos-latest'
+        run: |
+          cargo rustc -- -C link-arg=-undefined -C link-arg=dynamic_lookup

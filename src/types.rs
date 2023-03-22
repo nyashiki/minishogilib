@@ -22,7 +22,7 @@ fn get_op_color_test() {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Piece(u8);
+pub struct Piece(pub u8);
 
 impl Piece {
     pub const NO_PIECE: Piece = Piece(0);
@@ -51,6 +51,10 @@ impl Piece {
 
     pub const fn as_usize(self) -> usize {
         self.0 as usize
+    }
+
+    pub const fn as_u32(self) -> u32 {
+        self.0 as u32
     }
 
     pub const fn get_promoted(self) -> Piece {
