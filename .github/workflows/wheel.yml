@@ -31,3 +31,8 @@ jobs:
         with:
           name: artifacts
           path: ./target/wheels/
+      -name: Publish
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: 'From gihub actions'
+          password: ${{ secrets.PYPI_API_TOKEN }}
