@@ -1,6 +1,10 @@
 # Minishogilib
-[![](https://github.com/Nyashiki/minishogilib/workflows/build/badge.svg)](https://github.com/Nyashiki/minishogilib/actions?workflow=build)
-[![](https://github.com/Nyashiki/minishogilib/workflows/test/badge.svg)](https://github.com/Nyashiki/minishogilib/actions?workflow=test)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI](https://badge.fury.io/py/minishogilib.svg)(https://pypi.org/project/minishogilib/)
+
+[![build](https://github.com/Nyashiki/minishogilib/actions/workflows/build.yml/badge.svg)](https://github.com/Nyashiki/minishogilib/actions/workflows/build.yml)
+[![test](https://github.com/Nyashiki/minishogilib/actions/workflows/test.yml/badge.svg)](https://github.com/Nyashiki/minishogilib/actions/workflows/test.yml)
+[![wheel](https://github.com/Nyashiki/minishogilib/actions/workflows/wheel.yml/badge.svg)](https://github.com/Nyashiki/minishogilib/actions/workflows/wheel.yml)
 
 This is a python3 library of [Minishogi](https://en.wikipedia.org/wiki/Minishogi) (a variant of Shogi) written in Rust.
 
