@@ -33,8 +33,7 @@ jobs:
           path: ./target/wheels/
       - name: Copy artifacts into dist
         run:
-          mkdir -p dist/
-          cp ./target/wheels/*.whl dist/
+          mkdir -p dist/ && cp ./target/wheels/*.whl dist/
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
