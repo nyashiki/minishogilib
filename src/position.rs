@@ -1390,8 +1390,6 @@ fn piece_type_to_kanji(piece_type: PieceType) -> String {
 
 #[test]
 fn pawn_flags_test() {
-    ::bitboard::init();
-
     const LOOP_NUM: i32 = 100000;
 
     let mut position = Position::empty_board();
@@ -1437,8 +1435,6 @@ fn pawn_flags_test() {
 
 #[test]
 fn move_do_undo_test() {
-    ::bitboard::init();
-
     const LOOP_NUM: i32 = 10000;
 
     let mut position = Position::empty_board();
@@ -1519,8 +1515,6 @@ fn move_do_undo_test() {
 
 #[test]
 fn sfen_test() {
-    ::bitboard::init();
-
     const LOOP_NUM: i32 = 1000;
 
     let mut position = Position::empty_board();
@@ -1620,8 +1614,6 @@ fn sfen_test() {
 
 #[test]
 fn bitboard_test() {
-    ::bitboard::init();
-
     const LOOP_NUM: i32 = 100000;
 
     let mut position = Position::empty_board();
@@ -1654,8 +1646,6 @@ fn bitboard_test() {
 
 #[test]
 fn no_legal_move_test() {
-    ::bitboard::init();
-
     static CHECKMATE_SFEN1: &str = "5/5/2p2/2g2/2K2 b P 1";
     static CHECKMATE_SFEN2: &str = "4k/1s1gp/p4/g1BS1/1KR2 b BRg 1";
     static CHECKMATE_SFEN3: &str = "4k/2G2/5/5/4R w - 1";
@@ -1702,8 +1692,6 @@ fn no_legal_move_test() {
 
 #[test]
 fn not_checkmate_positions() {
-    ::bitboard::init();
-
     static NOT_CHECKMATE_SFEN1: &str = "rb1gk/1s2R/5/P1B2/KGS2 w P 1";
 
     let mut position = Position::empty_board();
@@ -1714,8 +1702,6 @@ fn not_checkmate_positions() {
 
 #[test]
 fn no_king_capture_move_in_legal_moves_test() {
-    ::bitboard::init();
-
     const LOOP_NUM: i32 = 100000;
 
     let mut position = Position::empty_board();
@@ -1747,8 +1733,6 @@ fn no_king_capture_move_in_legal_moves_test() {
 
 #[test]
 fn generate_moves_test() {
-    ::bitboard::init();
-
     const LOOP_NUM: i32 = 10000;
 
     let mut position = Position::empty_board();
@@ -1792,9 +1776,6 @@ fn generate_moves_test() {
 
 #[test]
 fn hash_test() {
-    ::bitboard::init();
-    ::zobrist::init();
-
     const LOOP_NUM: i32 = 100000;
 
     let mut position = Position::empty_board();
@@ -1825,9 +1806,6 @@ fn hash_test() {
 
 #[test]
 fn is_repetition_test() {
-    ::bitboard::init();
-    ::zobrist::init();
-
     let mut position = Position::empty_board();
 
     static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
@@ -1869,9 +1847,6 @@ fn is_repetition_test() {
 
 #[test]
 fn get_repetition_test() {
-    ::bitboard::init();
-    ::zobrist::init();
-
     let mut position = Position::empty_board();
 
     static START_POSITION_SFEN: &str = "rbsgk/4p/5/P4/KGSBR b - 1";
@@ -1900,9 +1875,6 @@ fn get_repetition_test() {
 
 #[test]
 fn sfen_to_move_test() {
-    ::bitboard::init();
-    ::zobrist::init();
-
     const LOOP_NUM: i32 = 10000;
 
     let mut position = Position::empty_board();
@@ -1932,9 +1904,6 @@ fn sfen_to_move_test() {
 
 #[test]
 fn init_position_moves_test() {
-    ::bitboard::init();
-    ::zobrist::init();
-
     let mut position = Position::empty_board();
     position.set_start_position();
     let moves = position.generate_moves();
@@ -1944,8 +1913,6 @@ fn init_position_moves_test() {
 
 #[test]
 fn do_move_simple_test() {
-    ::bitboard::init();
-
     const LOOP_NUM: i32 = 100000;
 
     let mut position = Position::empty_board();
