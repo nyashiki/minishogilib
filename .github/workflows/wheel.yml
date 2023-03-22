@@ -1,17 +1,33 @@
-name: wheel
+name: build
 
 on: [push]
 
 jobs:
-  wheel:
-    runs-on: ubuntu-18.04
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v1
-      - name: Wheel
+      - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Rust
         run: |
-          cd docker
-          docker-compose up build
-      - uses: actions/upload-artifact@master
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          export PATH="/root/.cargo/bin:${PATH}"
+      - name: Install maturin
+        run: |
+          pip3 install maturin
+      - name: Build wheel
+        run: |
+          maturin build --release
+      - name: Upload artifact
+        uses: actions/upload-artifact@master
         with:
           name: artifacts
           path: ./target/wheels/
