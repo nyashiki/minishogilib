@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install python3-dev
-        if: matrix.os == "macos-latest"
+        if: ${{ matrix.os }} == "macos-latest"
         run: |
           brew install python3-dev
       - name: Install Rust
