@@ -6,7 +6,7 @@ jobs:
   wheel:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -43,10 +43,15 @@ jobs:
       - name: Set up zig
         uses: goto-bus-stop/setup-zig@v2
       - name: Build wheel
+        if: matrix.os == 'ubuntu-latest'
         run: |
           maturin build --release --zig
+      - name: Build wheel
+        if: matrix.os == 'macos-latest'
+        run: |
+          maturin build --release --universal2
       - name: Upload artifact
         uses: actions/upload-artifact@master
         with:
           name: artifacts
-          path: ./target/wheel/
+          path: ./target/wheels/
