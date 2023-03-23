@@ -1,9 +1,12 @@
-name: wheel
+name: pypi
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
-  wheel:
+  pypi:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -52,8 +55,10 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           maturin build --release --target universal2-apple-darwin
-      - name: Upload artifact
-        uses: actions/upload-artifact@master
-        with:
-          name: artifacts
-          path: ./target/wheels/
+      - name: Publish
+        env:
+          TWINE_USERNAME: "__token__"
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          pip3 install twine
+          twine upload ./target/wheels/*.whl
