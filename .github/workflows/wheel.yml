@@ -33,6 +33,7 @@ jobs:
           python-version: '3.11'
       - name: Set up Rust
         uses: actions/setup-rust@v1
+      - name: Enable Rust
         run: |
           source "$HOME/.cargo/env"
       - name: Install maturin
