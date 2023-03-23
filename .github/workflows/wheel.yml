@@ -6,7 +6,7 @@ jobs:
   wheel:
     strategy:
       matrix:
-        os: [ubuntu-12.04]
+        os: [ubuntu-20.04]
 
     runs-on: ${{ matrix.os }}
     steps:
