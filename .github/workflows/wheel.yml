@@ -37,10 +37,12 @@ jobs:
       - name: Enable Rust
         run: |
           source "$HOME/.cargo/env"
+          rustup target add aarch64-apple-darwin
       - name: Install maturin
         run: |
           pip3 install maturin
       - name: Set up zig
+        if: matrix.os == 'ubuntu-latest'
         uses: goto-bus-stop/setup-zig@v2
       - name: Build wheel
         if: matrix.os == 'ubuntu-latest'
@@ -49,7 +51,7 @@ jobs:
       - name: Build wheel
         if: matrix.os == 'macos-latest'
         run: |
-          maturin build --release --universal2
+          maturin build --release --universal2-apple-darwin
       - name: Upload artifact
         uses: actions/upload-artifact@master
         with:
