@@ -1,9 +1,12 @@
-name: wheel
+name: pypi
 
-on: [push]
+on:
+ pull_request:
+   branches:
+     - master
 
 jobs:
-  wheel:
+  pypi:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -41,12 +44,10 @@ jobs:
       - name: Build wheel
         run: |
           maturin build --release
-      - name: auditwheel
+      - name: Publish
+        env:
+          TWINE_USERNAME: "__token__"
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          pip3 install auditwheel
-          mkdir -p manylinux_wheel/ && auditwheel repair ./target/wheels/*.whl -w manylinux_wheel/
-      - name: Upload artifact
-        uses: actions/upload-artifact@master
-        with:
-          name: artifacts
-          path: manylinux_wheel/
+          pip3 install twine
+          twine upload ./target/wheels/*.whl
