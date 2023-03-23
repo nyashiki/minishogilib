@@ -1,9 +1,9 @@
 name: pypi
 
 on:
- pull_request:
-   branches:
-     - master
+  push:
+    branches:
+      - master
 
 jobs:
   pypi:
@@ -17,33 +17,44 @@ jobs:
       - name: Set up Python 3.7 on ${{ matrix.os }}
         uses: actions/setup-python@v4
         with:
-          python-version: 3.7
+          python-version: '3.7'
       - name: Set up Python 3.8 on ${{ matrix.os }}
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.8'
       - name: Set up Python 3.9 on ${{ matrix.os }}
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: '3.9'
       - name: Set up Python 3.10 on ${{ matrix.os }}
         uses: actions/setup-python@v4
         with:
-          python-version: 3.10
+          python-version: '3.10'
       - name: Set up Python 3.11 on ${{ matrix.os }}
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
-      - name: Install Rust
+          python-version: '3.11'
+      - name: Set up Rust
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y
-          source $HOME/.cargo/env
+      - name: Enable Rust
+        run: |
+          source "$HOME/.cargo/env"
+          rustup target add aarch64-apple-darwin
       - name: Install maturin
         run: |
           pip3 install maturin
+      - name: Set up zig
+        if: matrix.os == 'ubuntu-latest'
+        uses: goto-bus-stop/setup-zig@v2
       - name: Build wheel
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          maturin build --release
+          maturin build --release --zig
+      - name: Build wheel
+        if: matrix.os == 'macos-latest'
+        run: |
+          maturin build --release --target universal2-apple-darwin
       - name: Publish
         env:
           TWINE_USERNAME: "__token__"
