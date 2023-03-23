@@ -103,13 +103,13 @@ impl Position {
 
         print!("WHITE HAND: ");
         for i in 0..5 {
-            print!("{}: {}, ", hand_str[i], self.hand[(Color::WHITE.as_usize())][i]);
+            print!("{}: {}, ", hand_str[i], self.hand[Color::WHITE.as_usize()][i]);
         }
         println!("");
 
         print!("BLACK HAND: ");
         for i in 0..5 {
-            print!("{}: {}, ", hand_str[i], self.hand[(Color::BLACK.as_usize())][i]);
+            print!("{}: {}, ", hand_str[i], self.hand[Color::BLACK.as_usize()][i]);
         }
         println!("");
 
